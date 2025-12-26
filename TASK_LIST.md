@@ -2,7 +2,7 @@
 
 **Status Legend:** ⬜ Not Started | 🟦 In Progress | ✅ Done | ❌ Blocked
 
-**Current State:** UI is 85% complete (built by v0). Primary remaining work is data integration (replacing mock data with OpenF1 API) and AI chat configuration.
+**Current State:** UI is 85% complete (built by v0). OpenF1 API integration is complete (EPIC 1). Remaining work is AI chat configuration (EPIC 2) and polish (EPICs 3-5).
 
 ---
 
@@ -22,13 +22,13 @@
 
 ---
 
-## **EPIC 1: OPENF1 API INTEGRATION** ⬜
+## **EPIC 1: OPENF1 API INTEGRATION** ✅
 
-### **Story 1.1: Create OpenF1 API Client** ⬜
+### **Story 1.1: Create OpenF1 API Client** ✅
 
 **Story:** As a developer, I need a reusable API client so that all components can fetch F1 data consistently.
 
-- ⬜ **Task 1.1.1:** Create `/types/openf1.ts` with TypeScript interfaces for all API responses:
+- ✅ **Task 1.1.1:** Create `/types/openf1.ts` with TypeScript interfaces for all API responses:
   - `Meeting` (meeting_key, meeting_name, country_name, date_start, circuit_short_name)
   - `Session` (session_key, date_start, date_end, session_name)
   - `Driver` (driver_number, name_acronym, team_colour, team_name, headshot_url)
@@ -38,104 +38,104 @@
   - `Lap` (driver_number, lap_number, lap_duration)
   - `PitStop` (driver_number, lap_number, pit_duration, date)
   - `RaceControl` (category, flag, message, date)
-- ⬜ **Task 1.1.2:** Create `/lib/openf1.ts` with base fetch utility:
+- ✅ **Task 1.1.2:** Create `/lib/openf1.ts` with base fetch utility:
   - Base URL constant: `https://api.openf1.org/v1`
   - Generic fetch function with error handling
   - 10-second request timeout
   - Console error logging in development
-- ⬜ **Task 1.1.3:** Implement `getMeetings(year: number)` function
-- ⬜ **Task 1.1.4:** Implement `getSession(meetingKey: number, sessionName: string)` function
-- ⬜ **Task 1.1.5:** Implement `getDrivers(sessionKey: number)` function
-- ⬜ **Task 1.1.6:** Implement `getLocations(sessionKey: number, driverNumber?: number)` function
-- ⬜ **Task 1.1.7:** Implement `getPositions(sessionKey: number)` function
-- ⬜ **Task 1.1.8:** Implement `getIntervals(sessionKey: number)` function
-- ⬜ **Task 1.1.9:** Implement `getLaps(sessionKey: number)` function
-- ⬜ **Task 1.1.10:** Implement `getPitStops(sessionKey: number)` function
-- ⬜ **Task 1.1.11:** Implement `getRaceControl(sessionKey: number)` function
-- ⬜ **Task 1.1.12:** Add exponential backoff retry logic for rate limiting
+- ✅ **Task 1.1.3:** Implement `getMeetings(year: number)` function
+- ✅ **Task 1.1.4:** Implement `getSession(meetingKey: number, sessionName: string)` function
+- ✅ **Task 1.1.5:** Implement `getDrivers(sessionKey: number)` function
+- ✅ **Task 1.1.6:** Implement `getLocations(sessionKey: number, driverNumber?: number)` function
+- ✅ **Task 1.1.7:** Implement `getPositions(sessionKey: number)` function
+- ✅ **Task 1.1.8:** Implement `getIntervals(sessionKey: number)` function
+- ✅ **Task 1.1.9:** Implement `getLaps(sessionKey: number)` function
+- ✅ **Task 1.1.10:** Implement `getPitStops(sessionKey: number)` function
+- ✅ **Task 1.1.11:** Implement `getRaceControl(sessionKey: number)` function
+- ✅ **Task 1.1.12:** Add exponential backoff retry logic for rate limiting
 
 **Acceptance:** All OpenF1 API functions typed, tested, and handle errors gracefully (return null or empty array on failure).
 
 ---
 
-### **Story 1.2: Fetch 2025 Race Calendar** ⬜
+### **Story 1.2: Fetch 2025 Race Calendar** ✅
 
 **Story:** As a user, I want to see all 2025 F1 races so that I can choose which race to explore.
 
-- ⬜ **Task 1.2.1:** Update `/api/races/route.ts` to import OpenF1 client
-- ⬜ **Task 1.2.2:** Replace mock data with call to `getMeetings(2025)`
-- ⬜ **Task 1.2.3:** Filter meetings to exclude testing sessions (only include Grand Prix)
-- ⬜ **Task 1.2.4:** Sort races by `date_start` ascending
-- ⬜ **Task 1.2.5:** Map API response to frontend format (meeting_key, meeting_name, country_name, date_start, circuit_short_name)
-- ⬜ **Task 1.2.6:** Add server-side caching (races don't change frequently)
-- ⬜ **Task 1.2.7:** Handle edge case: OpenF1 returns no 2025 data → return message "2025 season data coming soon"
-- ⬜ **Task 1.2.8:** Update landing page to consume real API data
+- ✅ **Task 1.2.1:** Update `/api/races/route.ts` to import OpenF1 client
+- ✅ **Task 1.2.2:** Replace mock data with call to `getMeetings(2025)`
+- ✅ **Task 1.2.3:** Filter meetings to exclude testing sessions (only include Grand Prix)
+- ✅ **Task 1.2.4:** Sort races by `date_start` ascending
+- ✅ **Task 1.2.5:** Map API response to frontend format (meeting_key, meeting_name, country_name, date_start, circuit_short_name)
+- ✅ **Task 1.2.6:** Add server-side caching (races don't change frequently)
+- ✅ **Task 1.2.7:** Handle edge case: OpenF1 returns no 2025 data → return message "2025 season data coming soon"
+- ✅ **Task 1.2.8:** Update landing page to consume real API data
 
 **Acceptance:** Landing page displays real 2025 race calendar from OpenF1 API, sorted chronologically.
 
 ---
 
-### **Story 1.3: Fetch Race Session Data** ⬜
+### **Story 1.3: Fetch Race Session Data** ✅
 
 **Story:** As a user, I want to see accurate race information so that I know what I'm watching.
 
-- ⬜ **Task 1.3.1:** Update `/api/race/[meetingKey]/route.ts` to import OpenF1 client
-- ⬜ **Task 1.3.2:** Fetch session_key using `getSession(meetingKey, 'Race')`
-- ⬜ **Task 1.3.3:** Fetch drivers using `getDrivers(sessionKey)`
-- ⬜ **Task 1.3.4:** Fetch total laps using `getLaps(sessionKey)` and calculate max lap_number
-- ⬜ **Task 1.3.5:** Combine into race metadata response object
-- ⬜ **Task 1.3.6:** Handle edge case: No race session found → return 404 with message
-- ⬜ **Task 1.3.7:** Handle edge case: Missing driver data → use fallback driver names
+- ✅ **Task 1.3.1:** Update `/api/race/[meetingKey]/route.ts` to import OpenF1 client
+- ✅ **Task 1.3.2:** Fetch session_key using `getSession(meetingKey, 'Race')`
+- ✅ **Task 1.3.3:** Fetch drivers using `getDrivers(sessionKey)`
+- ✅ **Task 1.3.4:** Fetch total laps using `getLaps(sessionKey)` and calculate max lap_number
+- ✅ **Task 1.3.5:** Combine into race metadata response object
+- ✅ **Task 1.3.6:** Handle edge case: No race session found → return 404 with message
+- ✅ **Task 1.3.7:** Handle edge case: Missing driver data → use fallback driver names
 
 **Acceptance:** Race viewer receives real race metadata including session info, driver list, and total laps.
 
 ---
 
-### **Story 1.4: Fetch Position Data for Playback** ⬜
+### **Story 1.4: Fetch Position Data for Playback** ✅
 
 **Story:** As a user, I want to see real race positions so that I can watch the race unfold accurately.
 
-- ⬜ **Task 1.4.1:** Fetch position data using `getPositions(sessionKey)`
-- ⬜ **Task 1.4.2:** Create utility to group positions by lap number
-- ⬜ **Task 1.4.3:** Create lookup structure: `positionsByLap[lap][driverNumber] = position`
-- ⬜ **Task 1.4.4:** Update leaderboard component to use real position data
-- ⬜ **Task 1.4.5:** Handle edge case: Missing position for a driver at a lap → use last known position
-- ⬜ **Task 1.4.6:** Handle edge case: Driver DNF → show "OUT" in leaderboard
-- ⬜ **Task 1.4.7:** Remove `generateMockPositions()` function
+- ✅ **Task 1.4.1:** Fetch position data using `getPositions(sessionKey)`
+- ✅ **Task 1.4.2:** Create utility to group positions by lap number
+- ✅ **Task 1.4.3:** Create lookup structure: `positionsByLap[lap][driverNumber] = position`
+- ✅ **Task 1.4.4:** Update leaderboard component to use real position data
+- ✅ **Task 1.4.5:** Handle edge case: Missing position for a driver at a lap → use last known position
+- ✅ **Task 1.4.6:** Handle edge case: Driver DNF → show "OUT" in leaderboard
+- ✅ **Task 1.4.7:** Remove `generateMockPositions()` function
 
 **Acceptance:** Leaderboard displays real positions that update as user scrubs through timeline.
 
 ---
 
-### **Story 1.5: Fetch Interval Data** ⬜
+### **Story 1.5: Fetch Interval Data** ✅
 
 **Story:** As a user, I want to see gaps between drivers so that I understand the race state.
 
-- ⬜ **Task 1.5.1:** Fetch interval data using `getIntervals(sessionKey)`
-- ⬜ **Task 1.5.2:** Group intervals by timestamp/lap
-- ⬜ **Task 1.5.3:** Display `gap_to_leader` for each driver in leaderboard
-- ⬜ **Task 1.5.4:** Format intervals: "LEADER" for P1, "+X.XXX" for others
-- ⬜ **Task 1.5.5:** Handle lapped cars → show "+1 LAP" or "LAP"
-- ⬜ **Task 1.5.6:** Handle edge case: No interval data → show "---" placeholder
-- ⬜ **Task 1.5.7:** Remove `generateMockIntervals()` function
+- ✅ **Task 1.5.1:** Fetch interval data using `getIntervals(sessionKey)`
+- ✅ **Task 1.5.2:** Group intervals by timestamp/lap
+- ✅ **Task 1.5.3:** Display `gap_to_leader` for each driver in leaderboard
+- ✅ **Task 1.5.4:** Format intervals: "LEADER" for P1, "+X.XXX" for others
+- ✅ **Task 1.5.5:** Handle lapped cars → show "+1 LAP" or "LAP"
+- ✅ **Task 1.5.6:** Handle edge case: No interval data → show "---" placeholder
+- ✅ **Task 1.5.7:** Remove `generateMockIntervals()` function
 
 **Acceptance:** Leaderboard shows real gaps between drivers that update during playback.
 
 ---
 
-### **Story 1.6: Fetch Car Location Data for 3D Track** ⬜
+### **Story 1.6: Fetch Car Location Data for 3D Track** ✅
 
 **Story:** As a user, I want to see cars move on the track so that I can visualize the race.
 
-- ⬜ **Task 1.6.1:** Fetch location data using `getLocations(sessionKey)`
-- ⬜ **Task 1.6.2:** Create `/lib/track-utils.ts` with coordinate utilities
-- ⬜ **Task 1.6.3:** Implement coordinate normalization function (scale OpenF1 x,y to track bounds)
-- ⬜ **Task 1.6.4:** Map OpenF1 coordinates to track SVG coordinate space
-- ⬜ **Task 1.6.5:** Create interpolation function for smooth 60fps animation (source data is ~3.7 Hz)
-- ⬜ **Task 1.6.6:** Update 3D track component to use real location data
-- ⬜ **Task 1.6.7:** Handle edge case: Missing location data → keep car at last known position
-- ⬜ **Task 1.6.8:** Handle edge case: Coordinate outliers → clamp to track bounds
-- ⬜ **Task 1.6.9:** Remove mock car position distribution logic
+- ✅ **Task 1.6.1:** Fetch location data using `getLocations(sessionKey)`
+- ✅ **Task 1.6.2:** Create `/lib/track-utils.ts` with coordinate utilities
+- ✅ **Task 1.6.3:** Implement coordinate normalization function (scale OpenF1 x,y to track bounds)
+- ✅ **Task 1.6.4:** Map OpenF1 coordinates to track SVG coordinate space
+- ✅ **Task 1.6.5:** Create interpolation function for smooth 60fps animation (source data is ~3.7 Hz)
+- ✅ **Task 1.6.6:** Update 3D track component to use real location data
+- ✅ **Task 1.6.7:** Handle edge case: Missing location data → keep car at last known position
+- ✅ **Task 1.6.8:** Handle edge case: Coordinate outliers → clamp to track bounds
+- ✅ **Task 1.6.9:** Remove mock car position distribution logic
 
 **Acceptance:** Cars animate smoothly on 3D track based on real OpenF1 location data at 60fps.
 
@@ -399,22 +399,22 @@ Epic 4 → Epic 6 (error handling before deployment)
 
 ## **FILES TO CREATE**
 
-| File | Epic | Description |
-|------|------|-------------|
-| `/types/openf1.ts` | 1.1 | TypeScript interfaces for OpenF1 API |
-| `/lib/openf1.ts` | 1.1 | OpenF1 API client with all fetch functions |
-| `/lib/track-utils.ts` | 1.6 | Coordinate normalization and interpolation |
-| `/lib/ai-context.ts` | 2.2 | AI system prompt builder with race context |
-| `.env.example` | 0.1 | Environment variable template |
+| File | Epic | Description | Status |
+|------|------|-------------|--------|
+| `/types/openf1.ts` | 1.1 | TypeScript interfaces for OpenF1 API | ✅ Created |
+| `/lib/openf1.ts` | 1.1 | OpenF1 API client with all fetch functions | ✅ Created |
+| `/lib/track-utils.ts` | 1.6 | Coordinate normalization and interpolation | ✅ Created |
+| `/lib/ai-context.ts` | 2.2 | AI system prompt builder with race context | ⬜ Pending |
+| `.env.example` | 0.1 | Environment variable template | ✅ Created |
 
 ---
 
 ## **FILES TO UPDATE**
 
-| File | Epic | Changes |
-|------|------|---------|
-| `/api/races/route.ts` | 1.2 | Replace mock data with OpenF1 API call |
-| `/api/race/[meetingKey]/route.ts` | 1.3-1.6 | Fetch real session/driver/position/location data |
-| `/api/chat/route.ts` | 2.1-2.3 | Add context, persona, and guardrails |
-| Race viewer components | 1.4-1.6 | Use real data for leaderboard and 3D track |
-| Chat components | 2.4 | Add loading states and error handling |
+| File | Epic | Changes | Status |
+|------|------|---------|--------|
+| `/api/races/route.ts` | 1.2 | Replace mock data with OpenF1 API call | ✅ Updated |
+| `/api/race/[meetingKey]/route.ts` | 1.3-1.6 | Fetch real session/driver/position/location data | ✅ Updated |
+| `/api/chat/route.ts` | 2.1-2.3 | Add context, persona, and guardrails | ⬜ Pending |
+| Race viewer components | 1.4-1.6 | Use real data for leaderboard and 3D track | ✅ Updated |
+| Chat components | 2.4 | Add loading states and error handling | ⬜ Pending |

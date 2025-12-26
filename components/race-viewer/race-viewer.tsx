@@ -1,8 +1,14 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useMemo } from "react"
 import type { Race } from "@/lib/race-data"
-import { drivers2025 } from "@/lib/f1-teams"
+import type { Driver } from "@/lib/f1-teams"
+import type {
+  OpenF1Location,
+  OpenF1Lap,
+  OpenF1RaceControl,
+  OpenF1PitStop,
+} from "@/types/openf1"
 import { RaceHeader } from "./race-header"
 import { TrackVisualization } from "./track-visualization"
 import { Leaderboard } from "./leaderboard"
@@ -11,55 +17,121 @@ import { ChatPanel } from "../chat/chat-panel"
 
 interface RaceViewerProps {
   race: Race
+  drivers: Driver[]
+  totalLaps: number
+  positionsByLap: Record<number, Record<number, number>>
+  intervalsByLap: Record<number, Record<number, { interval: number | null; gapToLeader: number | null }>>
+  locations: OpenF1Location[]
+  laps: OpenF1Lap[]
+  raceControl: OpenF1RaceControl[]
+  pitStops: OpenF1PitStop[]
 }
 
-// Mock race data for demonstration
-const generateMockPositions = (lap: number) => {
-  const baseOrder = [1, 4, 16, 11, 55, 44, 63, 81, 14, 18, 10, 31, 23, 2, 20, 27, 22, 3, 77, 24]
-  // Simulate some position changes based on lap
-  const shuffled = [...baseOrder]
-  const swapIndex = Math.floor((lap * 7) % 15)
-  if (swapIndex < shuffled.length - 1) {
-    ;[shuffled[swapIndex], shuffled[swapIndex + 1]] = [shuffled[swapIndex + 1], shuffled[swapIndex]]
-  }
-  return shuffled
+interface Standing {
+  position: number
+  driver: Driver
+  interval: string | null
+  gapToLeader: string | null
 }
 
-const generateMockIntervals = (positions: number[]) => {
-  return positions.map((driverNum, index) => {
-    if (index === 0) return { driverNumber: driverNum, interval: null, gapToLeader: null }
-    const gap = (Math.random() * 2 + 0.5 * index).toFixed(3)
-    const toLeader = (Number.parseFloat(gap) + index * 0.8).toFixed(3)
-    return { driverNumber: driverNum, interval: gap, gapToLeader: toLeader }
-  })
+/**
+ * Format interval value for display
+ */
+function formatInterval(value: number | null): string | null {
+  if (value === null) return null
+  if (value < 0) return null // Negative intervals can occur with data issues
+  return `+${value.toFixed(3)}`
 }
 
-export function RaceViewer({ race }: RaceViewerProps) {
-  const totalLaps = 57
+/**
+ * Format gap to leader for display
+ */
+function formatGapToLeader(value: number | null, position: number): string | null {
+  if (position === 1) return null // Leader shows no gap
+  if (value === null) return null
+  if (value < 0) return null
+  return `+${value.toFixed(3)}`
+}
+
+export function RaceViewer({
+  race,
+  drivers,
+  totalLaps,
+  positionsByLap,
+  intervalsByLap,
+  locations,
+  laps,
+  raceControl,
+  pitStops,
+}: RaceViewerProps) {
   const [currentLap, setCurrentLap] = useState(1)
   const [isPlaying, setIsPlaying] = useState(false)
   const [playbackSpeed, setPlaybackSpeed] = useState(1)
   const [isChatOpen, setIsChatOpen] = useState(true)
 
-  const positions = generateMockPositions(currentLap)
-  const intervals = generateMockIntervals(positions)
-
-  const standings = positions.map((driverNum, index) => {
-    const driver = drivers2025.find((d) => d.number === driverNum)
-    const intervalData = intervals.find((i) => i.driverNumber === driverNum)
-    return {
-      position: index + 1,
-      driver: driver!,
-      interval: intervalData?.interval,
-      gapToLeader: intervalData?.gapToLeader,
+  // Create a driver lookup map for efficient access
+  const driverMap = useMemo(() => {
+    const map = new Map<number, Driver>()
+    for (const driver of drivers) {
+      map.set(driver.number, driver)
     }
-  })
+    return map
+  }, [drivers])
+
+  // Get standings for current lap
+  const standings = useMemo((): Standing[] => {
+    const lapPositions = positionsByLap[currentLap] || positionsByLap[1] || {}
+    const lapIntervals = intervalsByLap[currentLap] || intervalsByLap[1] || {}
+
+    // Create array of driver positions
+    const driverPositions: Array<{ driverNumber: number; position: number }> = []
+
+    for (const [driverNumStr, position] of Object.entries(lapPositions)) {
+      driverPositions.push({
+        driverNumber: parseInt(driverNumStr, 10),
+        position,
+      })
+    }
+
+    // Sort by position
+    driverPositions.sort((a, b) => a.position - b.position)
+
+    // Map to standings
+    return driverPositions.map(({ driverNumber, position }) => {
+      const driver = driverMap.get(driverNumber)
+      const intervalData = lapIntervals[driverNumber]
+
+      // If driver not found, create a placeholder
+      if (!driver) {
+        return {
+          position,
+          driver: {
+            number: driverNumber,
+            code: `D${driverNumber}`,
+            firstName: "Unknown",
+            lastName: "Driver",
+            team: "unknown",
+            teamColor: "#FFFFFF",
+          },
+          interval: formatInterval(intervalData?.interval ?? null),
+          gapToLeader: formatGapToLeader(intervalData?.gapToLeader ?? null, position),
+        }
+      }
+
+      return {
+        position,
+        driver,
+        interval: formatInterval(intervalData?.interval ?? null),
+        gapToLeader: formatGapToLeader(intervalData?.gapToLeader ?? null, position),
+      }
+    })
+  }, [currentLap, positionsByLap, intervalsByLap, driverMap])
 
   const handleLapChange = useCallback(
     (lap: number) => {
       setCurrentLap(Math.max(1, Math.min(totalLaps, lap)))
     },
-    [totalLaps],
+    [totalLaps]
   )
 
   const handlePlayPause = useCallback(() => {
@@ -101,13 +173,25 @@ export function RaceViewer({ race }: RaceViewerProps) {
 
         {/* Track Visualization */}
         <div className="flex-1 relative">
-          <TrackVisualization trackId={race.circuitKey} standings={standings} currentLap={currentLap} />
+          <TrackVisualization
+            trackId={race.circuitKey}
+            standings={standings}
+            currentLap={currentLap}
+            locations={locations}
+            laps={laps}
+            totalLaps={totalLaps}
+          />
         </div>
 
         {/* Chat Panel */}
         {isChatOpen && (
           <div className="w-96 flex-shrink-0 border-l border-border/50">
-            <ChatPanel race={race} currentLap={currentLap} standings={standings} onClose={() => setIsChatOpen(false)} />
+            <ChatPanel
+              race={race}
+              currentLap={currentLap}
+              standings={standings}
+              onClose={() => setIsChatOpen(false)}
+            />
           </div>
         )}
       </div>
@@ -123,6 +207,8 @@ export function RaceViewer({ race }: RaceViewerProps) {
         onSpeedChange={handleSpeedChange}
         onToggleChat={() => setIsChatOpen((prev) => !prev)}
         isChatOpen={isChatOpen}
+        pitStops={pitStops}
+        raceControl={raceControl}
       />
     </div>
   )
