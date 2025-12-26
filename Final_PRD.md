@@ -59,8 +59,8 @@
 | Styling | Tailwind CSS 4 | Already configured, rapid UI iteration |
 | 3D Rendering | React Three Fiber + Drei | Already implemented, declarative Three.js |
 | Animation | Framer Motion | Already implemented throughout |
-| AI SDK | Vercel AI SDK + Anthropic | Already configured, streaming support |
-| LLM | Claude Sonnet 4 | Already configured in chat route |
+| AI SDK | Vercel AI SDK + OpenAI | Already configured, streaming support |
+| LLM | GPT-4o | Already configured in chat route |
 | External Data | OpenF1 API | Free, no auth, comprehensive F1 data |
 | Icons | Lucide React | Already in use |
 | Components | shadcn/ui (Radix) | Already installed |
@@ -117,7 +117,7 @@
 
 | Item | Status | Action Required |
 |------|--------|-----------------|
-| `ANTHROPIC_API_KEY` | Missing | Add to `.env.local` |
+| `OPENAI_API_KEY` | Missing | Add to `.env.local` |
 | OpenF1 API client | Not created | Create `/lib/openf1.ts` |
 | Error boundaries | Not implemented | Add fallback UI |
 | Data caching | Not implemented | Cache API responses |
@@ -241,17 +241,17 @@
 
 **Acceptance Criteria:**
 - [ ] Create `.env.example` with required variables
-- [ ] Document in README how to get Anthropic API key
+- [ ] Document in README how to get OpenAI API key
 - [ ] Validate API key exists on server startup
 - [ ] Show helpful error if key missing
 
 **Environment Variables:**
 ```
-ANTHROPIC_API_KEY=your-key-here
+OPENAI_API_KEY=your-key-here
 ```
 
 **Manual Setup Required:**
-1. Go to https://console.anthropic.com/
+1. Go to https://platform.openai.com/
 2. Create API key
 3. Add to `.env.local`
 
@@ -440,7 +440,7 @@ Scrub Timeline ───────────► Update currentLap
                             Update 3D car positions
                             Update leaderboard
 
-Send Chat Message ────────► Build context object ───► /api/chat ─────────────────► Anthropic API
+Send Chat Message ────────► Build context object ───► /api/chat ─────────────────► OpenAI API
                             (race, lap, standings)         │
                                    │                       │
                                    ▼                       ▼
@@ -456,7 +456,7 @@ Send Chat Message ────────► Build context object ───► 
 
 ```bash
 # Required for AI Chat functionality
-ANTHROPIC_API_KEY=sk-ant-api03-xxxxxxxxxxxxx
+OPENAI_API_KEY=sk-xxxxxxxxxxxxx
 
 # Optional: Override OpenF1 API URL (defaults to https://api.openf1.org/v1)
 OPENF1_API_URL=https://api.openf1.org/v1
@@ -467,12 +467,12 @@ DEBUG=false
 
 ### Manual Setup Instructions
 
-1. **Anthropic API Key:**
-   - Go to https://console.anthropic.com/
+1. **OpenAI API Key:**
+   - Go to https://platform.openai.com/
    - Create account or sign in
    - Navigate to API Keys section
    - Generate new key
-   - Copy to `.env.local` as `ANTHROPIC_API_KEY`
+   - Copy to `.env.local` as `OPENAI_API_KEY`
 
 2. **OpenF1 API:**
    - No setup required (free, no auth)
@@ -512,7 +512,7 @@ Set `DEBUG=true` in `.env.local` to enable:
 
 | Symptom | Cause | Solution |
 |---------|-------|----------|
-| Chat shows error | Missing API key | Add `ANTHROPIC_API_KEY` to `.env.local` |
+| Chat shows error | Missing API key | Add `OPENAI_API_KEY` to `.env.local` |
 | No races displayed | OpenF1 API down | Check https://api.openf1.org status |
 | Cars not moving | Location data missing | Verify session has location data |
 | Leaderboard stuck | Position data missing | Check `/position` endpoint response |
@@ -529,7 +529,7 @@ npm install
 
 # Create environment file
 cp .env.example .env.local
-# Edit .env.local and add your ANTHROPIC_API_KEY
+# Edit .env.local and add your OPENAI_API_KEY
 
 # Start development server
 npm run dev
@@ -552,7 +552,7 @@ npm start
 1. Push to GitHub repository
 2. Import project in Vercel dashboard
 3. Add environment variables in Vercel settings:
-   - `ANTHROPIC_API_KEY`
+   - `OPENAI_API_KEY`
 4. Deploy
 
 ---
