@@ -3,6 +3,7 @@
 import { Play, Pause, MessageSquare, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
+import type { OpenF1PitStop, OpenF1RaceControl } from "@/types/openf1"
 
 interface TimelineProps {
   currentLap: number
@@ -14,6 +15,9 @@ interface TimelineProps {
   onSpeedChange: (speed: number) => void
   onToggleChat: () => void
   isChatOpen: boolean
+  // Optional race event data for future enhancements (Epic 5)
+  pitStops?: OpenF1PitStop[]
+  raceControl?: OpenF1RaceControl[]
 }
 
 const speedOptions = [0.5, 1, 2, 4]

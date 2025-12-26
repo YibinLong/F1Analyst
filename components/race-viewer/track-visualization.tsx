@@ -4,7 +4,15 @@ import { Canvas } from "@react-three/fiber"
 import { OrbitControls, PerspectiveCamera, Environment } from "@react-three/drei"
 import { Suspense, useMemo } from "react"
 import type { Driver } from "@/lib/f1-teams"
+import type { OpenF1Location, OpenF1Lap } from "@/types/openf1"
 import { trackPaths } from "@/lib/track-paths"
+import {
+  calculateTrackBounds,
+  groupLocationsByDriver,
+  getAnimationTimestamp,
+  getRaceTimeRange,
+  getInterpolatedPosition,
+} from "@/lib/track-utils"
 
 interface Standing {
   position: number
@@ -17,6 +25,9 @@ interface TrackVisualizationProps {
   trackId: string
   standings: Standing[]
   currentLap: number
+  locations?: OpenF1Location[]
+  laps?: OpenF1Lap[]
+  totalLaps?: number
 }
 
 // Convert SVG path to 3D points
@@ -77,9 +88,7 @@ function Track({ trackId }: { trackId: string }) {
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"
-            count={points.length}
-            array={new Float32Array(points.flat())}
-            itemSize={3}
+            args={[new Float32Array(points.flat()), 3]}
           />
         </bufferGeometry>
         <lineBasicMaterial color="#00d4ff" linewidth={2} />
@@ -90,9 +99,7 @@ function Track({ trackId }: { trackId: string }) {
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"
-            count={points.length}
-            array={new Float32Array(points.flat())}
-            itemSize={3}
+            args={[new Float32Array(points.flat()), 3]}
           />
         </bufferGeometry>
         <lineBasicMaterial color="#00d4ff" transparent opacity={0.3} linewidth={8} />
@@ -110,23 +117,18 @@ function Track({ trackId }: { trackId: string }) {
 function Car({
   position,
   color,
-  index,
-  trackId,
+  x,
+  y,
+  z,
 }: {
   position: number
   color: string
-  index: number
-  trackId: string
+  x: number
+  y: number
+  z: number
 }) {
-  const path = trackPaths[trackId] || trackPaths.default
-  const points = useMemo(() => pathToPoints(path, 0.15), [path])
-
-  // Distribute cars along track based on position
-  const pointIndex = Math.floor((index / 20) * points.length * 0.8) % points.length
-  const carPosition = points[pointIndex] || [0, 0, 0]
-
   return (
-    <group position={[carPosition[0], 0.15, carPosition[2]]}>
+    <group position={[x, y, z]}>
       {/* Car body */}
       <mesh>
         <boxGeometry args={[0.3, 0.1, 0.15]} />
@@ -146,7 +148,41 @@ function Car({
   )
 }
 
-function Scene({ trackId, standings }: { trackId: string; standings: Standing[] }) {
+function CarFallback({
+  color,
+  index,
+  trackId,
+}: {
+  color: string
+  index: number
+  trackId: string
+}) {
+  const path = trackPaths[trackId] || trackPaths.default
+  const points = useMemo(() => pathToPoints(path, 0.15), [path])
+
+  // Distribute cars along track based on position
+  const pointIndex = Math.floor((index / 20) * points.length * 0.8) % points.length
+  const carPosition = points[pointIndex] || [0, 0, 0]
+
+  return (
+    <Car
+      position={index + 1}
+      color={color}
+      x={carPosition[0]}
+      y={0.15}
+      z={carPosition[2]}
+    />
+  )
+}
+
+interface SceneProps {
+  trackId: string
+  standings: Standing[]
+  carPositions: Map<number, { x: number; y: number; z: number }>
+  useRealPositions: boolean
+}
+
+function Scene({ trackId, standings, carPositions, useRealPositions }: SceneProps) {
   return (
     <>
       <PerspectiveCamera makeDefault position={[0, 12, 15]} fov={50} />
@@ -166,22 +202,87 @@ function Scene({ trackId, standings }: { trackId: string; standings: Standing[] 
 
       <Track trackId={trackId} />
 
-      {standings.slice(0, 20).map((standing, index) => (
-        <Car
-          key={standing.driver.number}
-          position={standing.position}
-          color={standing.driver.teamColor}
-          index={index}
-          trackId={trackId}
-        />
-      ))}
+      {standings.slice(0, 20).map((standing, index) => {
+        const realPos = carPositions.get(standing.driver.number)
+
+        if (useRealPositions && realPos) {
+          return (
+            <Car
+              key={standing.driver.number}
+              position={standing.position}
+              color={standing.driver.teamColor}
+              x={realPos.x}
+              y={realPos.y}
+              z={realPos.z}
+            />
+          )
+        }
+
+        // Fallback to distribution along track
+        return (
+          <CarFallback
+            key={standing.driver.number}
+            color={standing.driver.teamColor}
+            index={index}
+            trackId={trackId}
+          />
+        )
+      })}
 
       <Environment preset="night" />
     </>
   )
 }
 
-export function TrackVisualization({ trackId, standings, currentLap }: TrackVisualizationProps) {
+export function TrackVisualization({
+  trackId,
+  standings,
+  currentLap,
+  locations = [],
+  laps = [],
+  totalLaps = 57,
+}: TrackVisualizationProps) {
+  // Calculate track bounds and group locations
+  const { trackBounds, locationsByDriver, raceTimeRange } = useMemo(() => {
+    if (locations.length === 0) {
+      return {
+        trackBounds: null,
+        locationsByDriver: new Map(),
+        raceTimeRange: { start: Date.now(), end: Date.now() },
+      }
+    }
+
+    return {
+      trackBounds: calculateTrackBounds(locations),
+      locationsByDriver: groupLocationsByDriver(locations),
+      raceTimeRange: getRaceTimeRange(locations),
+    }
+  }, [locations])
+
+  // Calculate car positions for current lap
+  const carPositions = useMemo(() => {
+    const positions = new Map<number, { x: number; y: number; z: number }>()
+
+    if (!trackBounds || locationsByDriver.size === 0) {
+      return positions
+    }
+
+    // Calculate timestamp for current lap (assuming linear progress through lap)
+    const lapProgress = 0.5 // Middle of the lap
+    const timestamp = getAnimationTimestamp(currentLap, lapProgress, raceTimeRange, totalLaps)
+
+    for (const [driverNum, driverLocations] of locationsByDriver) {
+      const pos = getInterpolatedPosition(driverLocations, timestamp, trackBounds)
+      if (pos) {
+        positions.set(driverNum, pos)
+      }
+    }
+
+    return positions
+  }, [currentLap, trackBounds, locationsByDriver, raceTimeRange, totalLaps])
+
+  const useRealPositions = locations.length > 0 && carPositions.size > 0
+
   return (
     <div className="w-full h-full relative">
       {/* Scanline overlay */}
@@ -197,14 +298,21 @@ export function TrackVisualization({ trackId, standings, currentLap }: TrackVisu
 
       <div className="absolute top-4 right-4 z-20">
         <div className="glass-panel px-3 py-2 rounded-lg">
-          <span className="text-xs text-muted-foreground">SIMULATION</span>
+          <span className="text-xs text-muted-foreground">
+            {useRealPositions ? "LIVE DATA" : "SIMULATION"}
+          </span>
           <p className="font-mono text-sm text-accent">60 FPS</p>
         </div>
       </div>
 
       <Canvas>
         <Suspense fallback={null}>
-          <Scene trackId={trackId} standings={standings} />
+          <Scene
+            trackId={trackId}
+            standings={standings}
+            carPositions={carPositions}
+            useRealPositions={useRealPositions}
+          />
         </Suspense>
       </Canvas>
     </div>
