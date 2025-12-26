@@ -1,3 +1,4 @@
+import { openai } from "@ai-sdk/openai"
 import { consumeStream, convertToModelMessages, streamText, type UIMessage } from "ai"
 
 export const maxDuration = 30
@@ -67,9 +68,9 @@ ${raceContext.standings
   ])
 
   const result = streamText({
-    model: "anthropic/claude-sonnet-4-20250514",
+    model: openai("gpt-4o"),
     messages: prompt,
-    maxOutputTokens: 500,
+    maxTokens: 500,
     temperature: 0.7,
     abortSignal: req.signal,
   })
