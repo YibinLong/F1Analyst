@@ -58,7 +58,7 @@ ${raceContext.standings
 `
     : ""
 
-  const prompt = convertToModelMessages([
+  const prompt = await convertToModelMessages([
     {
       id: "system",
       role: "system" as const,
@@ -70,8 +70,6 @@ ${raceContext.standings
   const result = streamText({
     model: openai("gpt-4o"),
     messages: prompt,
-    maxTokens: 500,
-    temperature: 0.7,
     abortSignal: req.signal,
   })
 

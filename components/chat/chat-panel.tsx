@@ -30,23 +30,26 @@ export function ChatPanel({ race, currentLap, standings, onClose }: ChatPanelPro
   const [input, setInput] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  // Build race context for API requests
+  const raceContext = {
+    meetingName: race.meetingName,
+    country: race.country,
+    circuit: race.circuitKey,
+    currentLap,
+    totalLaps: 57,
+    standings: standings.slice(0, 10).map((s) => ({
+      position: s.position,
+      driver: s.driver.code,
+      team: s.driver.team,
+      interval: s.interval,
+    })),
+  }
+
   const { messages, sendMessage, status } = useChat<UIMessage>({
-    transport: new DefaultChatTransport({ api: "/api/chat" }),
-    body: {
-      raceContext: {
-        meetingName: race.meetingName,
-        country: race.country,
-        circuit: race.circuitKey,
-        currentLap,
-        totalLaps: 57,
-        standings: standings.slice(0, 10).map((s) => ({
-          position: s.position,
-          driver: s.driver.code,
-          team: s.driver.team,
-          interval: s.interval,
-        })),
-      },
-    },
+    transport: new DefaultChatTransport({
+      api: "/api/chat",
+      body: { raceContext },
+    }),
   })
 
   const scrollToBottom = () => {
