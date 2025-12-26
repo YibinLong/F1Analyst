@@ -6,17 +6,17 @@
 
 ---
 
-## **EPIC 0: PROJECT FOUNDATION** ⬜
+## **EPIC 0: PROJECT FOUNDATION** ✅
 
-### **Story 0.1: Environment Setup** ⬜
+### **Story 0.1: Environment Setup** ✅
 
 **Story:** Configure environment variables and validate existing setup
 
-- ⬜ **Task 0.1.1:** Create `.env.example` file with all required environment variables
-- ⬜ **Task 0.1.2:** Document how to obtain OpenAI API key in README
-- ⬜ **Task 0.1.3:** Create `.env.local` with `OPENAI_API_KEY` placeholder
-- ⬜ **Task 0.1.4:** Verify Next.js 16, Tailwind CSS 4, and all dependencies are installed correctly
-- ⬜ **Task 0.1.5:** Test development server starts without errors (`npm run dev`)
+- ✅ **Task 0.1.1:** Create `.env.example` file with all required environment variables
+- ✅ **Task 0.1.2:** Document how to obtain OpenAI API key in README
+- ✅ **Task 0.1.3:** Create `.env.local` with `OPENAI_API_KEY` placeholder
+- ✅ **Task 0.1.4:** Verify Next.js 16, Tailwind CSS 4, and all dependencies are installed correctly
+- ✅ **Task 0.1.5:** Test development server starts without errors (`npm run dev`)
 
 **Acceptance:** Project runs locally, environment variables documented, dev server accessible at localhost:3000.
 
