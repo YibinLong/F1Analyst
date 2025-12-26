@@ -64,6 +64,15 @@ async function fetchOpenF1<T>(
         return fetchOpenF1<T>(endpoint, params, retryCount + 1)
       }
 
+      // Handle 422 Unprocessable Entity - data not available (e.g., future races)
+      // Return null instead of throwing to indicate missing data gracefully
+      if (response.status === 422) {
+        if (process.env.NODE_ENV === "development") {
+          console.warn(`[OpenF1] Data not available for ${endpoint} (HTTP 422)`)
+        }
+        return null
+      }
+
       throw new Error(`HTTP ${response.status}: ${response.statusText}`)
     }
 
