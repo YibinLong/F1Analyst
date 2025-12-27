@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import { RaceViewer } from "./race-viewer"
 import { RaceViewerSkeleton } from "./race-viewer-skeleton"
 import type { Race } from "@/lib/race-data"
@@ -90,85 +91,100 @@ export function RaceViewerWrapper({ meetingKey, initialRaceInfo }: RaceViewerWra
     fetchRaceData()
   }, [meetingKey])
 
-  if (isLoading) {
-    return (
-      <div className="h-screen flex flex-col items-center justify-center bg-background">
-        <div className="glass-panel p-8 rounded-xl text-center max-w-md">
-          <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
-          <h2 className="text-xl font-bold mb-2">Loading {initialRaceInfo.meetingName}</h2>
-          <p className="text-muted-foreground mb-4">
-            Fetching race data from OpenF1 API...
-          </p>
-          <div className="w-full bg-muted rounded-full h-2">
-            <div
-              className="bg-primary h-2 rounded-full transition-all duration-300"
-              style={{ width: `${loadingProgress}%` }}
-            />
-          </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            {loadingProgress < 15
-              ? "Connecting to OpenF1 API..."
-              : loadingProgress < 35
-                ? "Fetching session data..."
-                : loadingProgress < 55
-                  ? "Downloading location data..."
-                  : loadingProgress < 85
-                    ? "Processing race data..."
-                    : loadingProgress < 100
-                      ? "Preparing visualization..."
-                      : "Ready!"}
-          </p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="h-screen flex flex-col items-center justify-center bg-background">
-        <div className="glass-panel p-8 rounded-xl text-center max-w-md">
-          <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-          <h2 className="text-xl font-bold mb-2">Error Loading Race</h2>
-          <p className="text-muted-foreground mb-4">{error}</p>
-          <button
-            onClick={() => {
-              setIsLoading(true)
-              setError(null)
-              setLoadingProgress(0)
-              fetch(`/api/race/${meetingKey}`)
-                .then((res) => {
-                  if (!res.ok) throw new Error("Failed to fetch")
-                  return res.json()
-                })
-                .then((data) => setRaceData(data))
-                .catch((err) => setError(err.message))
-                .finally(() => setIsLoading(false))
-            }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Try Again
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  if (!raceData) {
-    return <RaceViewerSkeleton />
-  }
-
   return (
-    <RaceViewer
-      race={raceData.race}
-      drivers={raceData.drivers}
-      totalLaps={raceData.totalLaps}
-      positionsByLap={raceData.positionsByLap}
-      intervalsByLap={raceData.intervalsByLap}
-      locations={raceData.locations}
-      laps={raceData.laps}
-      raceControl={raceData.raceControl}
-      pitStops={raceData.pitStops}
-    />
+    <AnimatePresence mode="wait">
+      {isLoading ? (
+        <motion.div
+          key="loading"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+          className="h-screen flex flex-col items-center justify-center bg-background"
+        >
+          <div className="glass-panel p-8 rounded-xl text-center max-w-md">
+            <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
+            <h2 className="text-xl font-bold mb-2">Loading {initialRaceInfo.meetingName}</h2>
+            <p className="text-muted-foreground mb-4">
+              Fetching race data from OpenF1 API...
+            </p>
+            <div className="w-full bg-muted rounded-full h-2">
+              <div
+                className="bg-primary h-2 rounded-full transition-all duration-300"
+                style={{ width: `${loadingProgress}%` }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {loadingProgress < 15
+                ? "Connecting to OpenF1 API..."
+                : loadingProgress < 35
+                  ? "Fetching session data..."
+                  : loadingProgress < 55
+                    ? "Downloading location data..."
+                    : loadingProgress < 85
+                      ? "Processing race data..."
+                      : loadingProgress < 100
+                        ? "Preparing visualization..."
+                        : "Ready!"}
+            </p>
+          </div>
+        </motion.div>
+      ) : error ? (
+        <motion.div
+          key="error"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+          className="h-screen flex flex-col items-center justify-center bg-background"
+        >
+          <div className="glass-panel p-8 rounded-xl text-center max-w-md">
+            <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
+            <h2 className="text-xl font-bold mb-2">Error Loading Race</h2>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <button
+              onClick={() => {
+                setIsLoading(true)
+                setError(null)
+                setLoadingProgress(0)
+                fetch(`/api/race/${meetingKey}`)
+                  .then((res) => {
+                    if (!res.ok) throw new Error("Failed to fetch")
+                    return res.json()
+                  })
+                  .then((data) => setRaceData(data))
+                  .catch((err) => setError(err.message))
+                  .finally(() => setIsLoading(false))
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Try Again
+            </button>
+          </div>
+        </motion.div>
+      ) : raceData ? (
+        <motion.div
+          key="content"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+        >
+          <RaceViewer
+            race={raceData.race}
+            drivers={raceData.drivers}
+            totalLaps={raceData.totalLaps}
+            positionsByLap={raceData.positionsByLap}
+            intervalsByLap={raceData.intervalsByLap}
+            locations={raceData.locations}
+            laps={raceData.laps}
+            raceControl={raceData.raceControl}
+            pitStops={raceData.pitStops}
+          />
+        </motion.div>
+      ) : (
+        <RaceViewerSkeleton />
+      )}
+    </AnimatePresence>
   )
 }
