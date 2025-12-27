@@ -2,6 +2,7 @@ import { Suspense } from "react"
 import { notFound } from "next/navigation"
 import { RaceViewerWrapper } from "@/components/race-viewer/race-viewer-wrapper"
 import { RaceViewerSkeleton } from "@/components/race-viewer/race-viewer-skeleton"
+import { RaceViewerErrorBoundary } from "@/components/error-boundary"
 import { getMeetings, mapCircuitToKey } from "@/lib/openf1"
 
 interface RacePageProps {
@@ -57,9 +58,11 @@ export default async function RacePage({ params }: RacePageProps) {
       {/* HUD Grid Background */}
       <div className="fixed inset-0 hud-grid opacity-20 pointer-events-none" />
 
-      <Suspense fallback={<RaceViewerSkeleton />}>
-        <RaceViewerWrapper meetingKey={meetingKey} initialRaceInfo={raceInfo} />
-      </Suspense>
+      <RaceViewerErrorBoundary>
+        <Suspense fallback={<RaceViewerSkeleton />}>
+          <RaceViewerWrapper meetingKey={meetingKey} initialRaceInfo={raceInfo} />
+        </Suspense>
+      </RaceViewerErrorBoundary>
     </main>
   )
 }
