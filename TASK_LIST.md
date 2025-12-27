@@ -2,7 +2,7 @@
 
 **Status Legend:** ⬜ Not Started | 🟦 In Progress | ✅ Done | ❌ Blocked
 
-**Current State:** UI is 85% complete (built by v0). OpenF1 API integration is complete (EPIC 1). AI chat integration is complete (EPIC 2). Data caching & performance is complete (EPIC 3). Error handling & reliability is complete (EPIC 4). Remaining work is polish (EPIC 5) and testing/deployment (EPIC 6).
+**Current State:** UI is 85% complete (built by v0). OpenF1 API integration is complete (EPIC 1). AI chat integration is complete (EPIC 2). Data caching & performance is complete (EPIC 3). Error handling & reliability is complete (EPIC 4). Polish stories 5.1-5.3 are complete (pit stops, safety car indicators, loading experience). Remaining work is visual polish (EPIC 5: Stories 5.4-5.9) and testing/deployment (EPIC 6).
 
 ---
 
@@ -291,45 +291,45 @@
 
 ---
 
-## **EPIC 5: POLISH & UX IMPROVEMENTS** ⬜
+## **EPIC 5: POLISH & UX IMPROVEMENTS** 🟦
 
-### **Story 5.1: Add Pit Stop Markers to Timeline** ⬜
+### **Story 5.1: Add Pit Stop Markers to Timeline** ✅
 
 **Story:** As a user, I want to see when drivers pitted so that I can understand strategy.
 
-- ⬜ **Task 5.1.1:** Fetch pit stop data from `/pit?session_key=X`
-- ⬜ **Task 5.1.2:** Create pit stop marker component
-- ⬜ **Task 5.1.3:** Display pit markers on timeline at correct lap positions
-- ⬜ **Task 5.1.4:** Show driver code on marker hover
-- ⬜ **Task 5.1.5:** Color-code markers by team color
+- ✅ **Task 5.1.1:** Fetch pit stop data from `/pit?session_key=X` *(Already fetched in API route)*
+- ✅ **Task 5.1.2:** Create pit stop marker component *(Inline in timeline.tsx)*
+- ✅ **Task 5.1.3:** Display pit markers on timeline at correct lap positions
+- ✅ **Task 5.1.4:** Show driver code on marker hover
+- ✅ **Task 5.1.5:** Color-code markers by team color
 
 **Acceptance:** Timeline shows pit stop markers for all drivers, hoverable with driver info.
 
 ---
 
-### **Story 5.2: Add Safety Car/Flag Indicators** ⬜
+### **Story 5.2: Add Safety Car/Flag Indicators** ✅
 
 **Story:** As a user, I want to see race neutralizations so that I understand pace changes.
 
-- ⬜ **Task 5.2.1:** Fetch race control data from `/race_control?session_key=X`
-- ⬜ **Task 5.2.2:** Parse SC/VSC/Red Flag events from race control data
-- ⬜ **Task 5.2.3:** Highlight SC/VSC periods on timeline (yellow overlay)
-- ⬜ **Task 5.2.4:** Highlight red flag periods on timeline (red overlay)
-- ⬜ **Task 5.2.5:** Display flag icon in race header during active events
+- ✅ **Task 5.2.1:** Fetch race control data from `/race_control?session_key=X` *(Already fetched in API route)*
+- ✅ **Task 5.2.2:** Parse SC/VSC/Red Flag events from race control data
+- ✅ **Task 5.2.3:** Highlight SC/VSC periods on timeline (yellow overlay)
+- ✅ **Task 5.2.4:** Highlight red flag periods on timeline (red overlay)
+- ✅ **Task 5.2.5:** Display flag icon in race header during active events
 
 **Acceptance:** Timeline visually indicates safety car and flag periods; header shows current flag status.
 
 ---
 
-### **Story 5.3: Improve Loading Experience** ⬜
+### **Story 5.3: Improve Loading Experience** ✅
 
 **Story:** As a user, I want visual feedback during loading so that I know the app is working.
 
-- ⬜ **Task 5.3.1:** Implement loading skeleton for race viewer components
-- ⬜ **Task 5.3.2:** Add progress indicator for large data loads
-- ⬜ **Task 5.3.3:** Animate transitions between loading and loaded states
-- ⬜ **Task 5.3.4:** Ensure skeleton matches final UI layout
-- ⬜ **Task 5.3.5:** Add loading state for AI chat initial connection
+- ✅ **Task 5.3.1:** Implement loading skeleton for race viewer components
+- ✅ **Task 5.3.2:** Add progress indicator for large data loads *(Already existed in wrapper)*
+- ✅ **Task 5.3.3:** Animate transitions between loading and loaded states
+- ✅ **Task 5.3.4:** Ensure skeleton matches final UI layout
+- ✅ **Task 5.3.5:** Add loading state for AI chat initial connection *(Already had bounce animation)*
 
 **Acceptance:** All loading states have polished skeleton UI with smooth transitions.
 
