@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useMemo } from "react"
+import { useState, useCallback, useMemo, useEffect, useRef } from "react"
 import type { Race } from "@/lib/race-data"
 import type { Driver } from "@/lib/f1-teams"
 import type {
@@ -65,9 +65,14 @@ export function RaceViewer({
   pitStops,
 }: RaceViewerProps) {
   const [currentLap, setCurrentLap] = useState(1)
+  const [lapProgress, setLapProgress] = useState(0) // 0-1 progress within current lap
   const [isPlaying, setIsPlaying] = useState(false)
   const [playbackSpeed, setPlaybackSpeed] = useState(1)
   const [isChatOpen, setIsChatOpen] = useState(true)
+
+  // Refs for requestAnimationFrame playback
+  const animationFrameRef = useRef<number | null>(null)
+  const lastTimestampRef = useRef<number>(0)
 
   // Create a driver lookup map for efficient access
   const driverMap = useMemo(() => {
@@ -130,6 +135,7 @@ export function RaceViewer({
   const handleLapChange = useCallback(
     (lap: number) => {
       setCurrentLap(Math.max(1, Math.min(totalLaps, lap)))
+      setLapProgress(0) // Reset progress when manually changing laps
     },
     [totalLaps]
   )
@@ -142,22 +148,68 @@ export function RaceViewer({
     setPlaybackSpeed(speed)
   }, [])
 
-  // Auto-play effect
-  useState(() => {
-    if (!isPlaying) return
+  // Smooth 60fps playback using requestAnimationFrame
+  useEffect(() => {
+    if (!isPlaying) {
+      // Cleanup when not playing
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+        animationFrameRef.current = null
+      }
+      return
+    }
 
-    const interval = setInterval(() => {
-      setCurrentLap((prev) => {
-        if (prev >= totalLaps) {
-          setIsPlaying(false)
-          return prev
+    // Duration for one lap in milliseconds (base: 1 second per lap, adjusted by playback speed)
+    const lapDurationMs = 1000 / playbackSpeed
+
+    const animate = (timestamp: number) => {
+      if (!lastTimestampRef.current) {
+        lastTimestampRef.current = timestamp
+      }
+
+      const deltaTime = timestamp - lastTimestampRef.current
+      lastTimestampRef.current = timestamp
+
+      // Calculate progress increment (deltaTime / lapDuration gives fraction of lap completed)
+      const progressIncrement = deltaTime / lapDurationMs
+
+      setLapProgress((prevProgress) => {
+        const newProgress = prevProgress + progressIncrement
+
+        if (newProgress >= 1) {
+          // Lap completed, move to next lap
+          setCurrentLap((prevLap) => {
+            if (prevLap >= totalLaps) {
+              setIsPlaying(false)
+              return prevLap
+            }
+            return prevLap + 1
+          })
+          // Return the overflow progress for smooth transition
+          return newProgress - 1
         }
-        return prev + 1
-      })
-    }, 1000 / playbackSpeed)
 
-    return () => clearInterval(interval)
-  })
+        return newProgress
+      })
+
+      // Continue animation loop
+      if (isPlaying) {
+        animationFrameRef.current = requestAnimationFrame(animate)
+      }
+    }
+
+    // Start animation loop
+    lastTimestampRef.current = 0
+    animationFrameRef.current = requestAnimationFrame(animate)
+
+    // Cleanup on unmount or when dependencies change
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+        animationFrameRef.current = null
+      }
+    }
+  }, [isPlaying, playbackSpeed, totalLaps])
 
   return (
     <div className="h-screen flex flex-col">
@@ -177,6 +229,7 @@ export function RaceViewer({
             trackId={race.circuitKey}
             standings={standings}
             currentLap={currentLap}
+            lapProgress={lapProgress}
             locations={locations}
             laps={laps}
             totalLaps={totalLaps}
