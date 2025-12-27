@@ -79,11 +79,16 @@ export function ChatPanel({
     activeFlags: getActiveFlags(raceControl, currentLap),
   }), [race, currentLap, totalLaps, standings, pitStops, raceControl, positionsByLap, driverMap])
 
+  // Memoize the transport to update when raceContext changes
+  // This ensures the AI always receives the current lap and standings
+  const transport = useMemo(() => new DefaultChatTransport({
+    api: "/api/chat",
+    body: { raceContext },
+  }), [raceContext])
+
   const { messages, sendMessage, status, error, regenerate } = useChat<UIMessage>({
-    transport: new DefaultChatTransport({
-      api: "/api/chat",
-      body: { raceContext },
-    }),
+    id: "race-chat", // Fixed ID to preserve message history across context updates
+    transport,
     onError: (err) => {
       console.error("Chat error:", err)
     },

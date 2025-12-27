@@ -60,7 +60,9 @@ export function Leaderboard({ standings }: LeaderboardProps) {
                 {standing.position === 1 ? (
                   <span className="text-xs font-mono font-bold text-primary">LEADER</span>
                 ) : (
-                  <span className="text-xs font-mono text-muted-foreground">+{standing.interval}</span>
+                  <span className="text-xs font-mono text-muted-foreground">
+                    {standing.interval || "---"}
+                  </span>
                 )}
               </div>
             </motion.div>
@@ -73,11 +75,15 @@ export function Leaderboard({ standings }: LeaderboardProps) {
         <div className="grid grid-cols-2 gap-4 text-xs">
           <div>
             <span className="text-muted-foreground">Gap P1-P2</span>
-            <p className="font-mono font-bold text-foreground">+{standings[1]?.interval || "0.000"}</p>
+            <p className="font-mono font-bold text-foreground">
+              {standings[1]?.interval || "---"}
+            </p>
           </div>
           <div>
             <span className="text-muted-foreground">Gap P1-P3</span>
-            <p className="font-mono font-bold text-foreground">+{standings[2]?.gapToLeader || "0.000"}</p>
+            <p className="font-mono font-bold text-foreground">
+              {standings[2]?.gapToLeader || "---"}
+            </p>
           </div>
         </div>
       </div>
