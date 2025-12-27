@@ -219,7 +219,7 @@ export function RaceViewer({
   return (
     <div className="h-screen flex flex-col">
       {/* Header */}
-      <RaceHeader race={race} currentLap={currentLap} totalLaps={totalLaps} />
+      <RaceHeader race={race} currentLap={currentLap} totalLaps={totalLaps} raceControl={raceControl} />
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
@@ -272,6 +272,7 @@ export function RaceViewer({
         isChatOpen={isChatOpen}
         pitStops={pitStops}
         raceControl={raceControl}
+        drivers={drivers}
       />
     </div>
   )
