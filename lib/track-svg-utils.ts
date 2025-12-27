@@ -192,6 +192,81 @@ export function distributeCarPositions(
 }
 
 /**
+ * Calculate starting grid positions for F1-style grid
+ * Cars are positioned in a 2-wide staggered formation behind the start line
+ */
+export function calculateStartingGridPositions(
+  points: Track3DPoint[],
+  numCars: number,
+  gridSpacing: number = 0.25, // Distance between grid rows
+  laneOffset: number = 0.15 // Left/right offset from center
+): Array<{ position: Track3DPoint; rotation: number }> {
+  if (points.length < 2 || numCars === 0) return []
+
+  const result: Array<{ position: Track3DPoint; rotation: number }> = []
+
+  // Get direction at start line
+  const startPoint = points[0]
+  const nextPoint = points[1]
+  const dx = nextPoint.x - startPoint.x
+  const dz = nextPoint.z - startPoint.z
+  const len = Math.sqrt(dx * dx + dz * dz)
+
+  // Normalize direction
+  const dirX = dx / len
+  const dirZ = dz / len
+
+  // Perpendicular for lane offset
+  const perpX = -dirZ
+  const perpZ = dirX
+
+  // Start rotation (facing direction of travel)
+  const rotation = Math.atan2(dx, dz)
+
+  for (let i = 0; i < numCars; i++) {
+    // Calculate grid row (0, 1, 2, ...) and side (0 = left/pole, 1 = right)
+    const row = Math.floor(i / 2)
+    const side = i % 2
+
+    // Offset behind start line (negative direction)
+    const backOffset = (row + 1) * gridSpacing
+
+    // Stagger effect: odd rows are offset slightly more
+    const staggerOffset = side === 1 ? gridSpacing * 0.4 : 0
+
+    // Lane offset (left for pole, right for other)
+    const sideOffset = side === 0 ? laneOffset : -laneOffset
+
+    const position: Track3DPoint = {
+      x: startPoint.x - dirX * (backOffset + staggerOffset) + perpX * sideOffset,
+      y: 0.15,
+      z: startPoint.z - dirZ * (backOffset + staggerOffset) + perpZ * sideOffset,
+    }
+
+    result.push({ position, rotation })
+  }
+
+  return result
+}
+
+/**
+ * Interpolate a position along the track given a progress value (0-1)
+ */
+export function getPositionAlongTrack(
+  points: Track3DPoint[],
+  progress: number // 0-1 around the track
+): { position: Track3DPoint; rotation: number } {
+  if (points.length === 0) {
+    return { position: { x: 0, y: 0.15, z: 0 }, rotation: 0 }
+  }
+
+  const totalLength = calculatePathLength(points)
+  const targetDistance = (progress % 1) * totalLength
+
+  return getPointAtDistance(points, targetDistance)
+}
+
+/**
  * Fetch and parse track SVG from public folder
  * Returns cached promise to avoid multiple fetches
  */
