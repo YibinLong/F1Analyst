@@ -1,9 +1,11 @@
 "use client"
 
+import { useMemo } from "react"
 import { Play, Pause, MessageSquare, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import type { OpenF1PitStop, OpenF1RaceControl } from "@/types/openf1"
+import type { Driver } from "@/lib/f1-teams"
 
 interface TimelineProps {
   currentLap: number
@@ -15,12 +17,78 @@ interface TimelineProps {
   onSpeedChange: (speed: number) => void
   onToggleChat: () => void
   isChatOpen: boolean
-  // Optional race event data for future enhancements (Epic 5)
+  // Race event data for Epic 5 enhancements
   pitStops?: OpenF1PitStop[]
   raceControl?: OpenF1RaceControl[]
+  drivers?: Driver[]
+}
+
+// Represents a flag period (SC, VSC, or Red Flag)
+interface FlagPeriod {
+  type: "SC" | "VSC" | "RED"
+  startLap: number
+  endLap: number
 }
 
 const speedOptions = [0.5, 1, 2, 4]
+
+/**
+ * Detects flag periods (SC, VSC, Red Flag) from race control events
+ */
+function getFlagPeriods(raceControl: OpenF1RaceControl[], totalLaps: number): FlagPeriod[] {
+  const periods: FlagPeriod[] = []
+  let currentPeriod: FlagPeriod | null = null
+
+  // Sort by date
+  const sorted = [...raceControl].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+  )
+
+  for (const event of sorted) {
+    const msg = event.message?.toUpperCase() || ""
+    const lap = event.lap_number
+
+    if (lap === null) continue
+
+    // SC start
+    if (msg.includes("SAFETY CAR DEPLOYED") || msg.includes("SC DEPLOYED")) {
+      if (currentPeriod) currentPeriod.endLap = lap
+      currentPeriod = { type: "SC", startLap: lap, endLap: lap }
+      periods.push(currentPeriod)
+    }
+    // VSC start
+    else if (msg.includes("VSC DEPLOYED") || msg.includes("VIRTUAL SAFETY CAR DEPLOYED")) {
+      if (currentPeriod) currentPeriod.endLap = lap
+      currentPeriod = { type: "VSC", startLap: lap, endLap: lap }
+      periods.push(currentPeriod)
+    }
+    // Red flag
+    else if (event.flag === "RED") {
+      if (currentPeriod) currentPeriod.endLap = lap
+      currentPeriod = { type: "RED", startLap: lap, endLap: lap }
+      periods.push(currentPeriod)
+    }
+    // End conditions
+    else if (
+      msg.includes("SAFETY CAR IN") ||
+      msg.includes("SC IN THIS LAP") ||
+      msg.includes("VSC ENDING") ||
+      event.flag === "GREEN"
+    ) {
+      if (currentPeriod) {
+        currentPeriod.endLap = lap
+        currentPeriod = null
+      }
+    }
+  }
+
+  // If period still active, end at total laps
+  if (currentPeriod) {
+    currentPeriod.endLap = totalLaps
+  }
+
+  return periods
+}
 
 export function Timeline({
   currentLap,
@@ -32,8 +100,32 @@ export function Timeline({
   onSpeedChange,
   onToggleChat,
   isChatOpen,
+  pitStops,
+  raceControl,
+  drivers,
 }: TimelineProps) {
   const progress = (currentLap / totalLaps) * 100
+
+  // Create driver lookup map for efficient access
+  const driverMap = useMemo(() => {
+    const map = new Map<number, Driver>()
+    for (const driver of drivers || []) {
+      map.set(driver.number, driver)
+    }
+    return map
+  }, [drivers])
+
+  // Calculate flag periods from race control data
+  const flagPeriods = useMemo(
+    () => getFlagPeriods(raceControl || [], totalLaps),
+    [raceControl, totalLaps]
+  )
+
+  // Position calculation: lap number to percentage
+  const lapToPercent = (lap: number) => {
+    if (totalLaps <= 1) return 0
+    return ((lap - 1) / (totalLaps - 1)) * 100
+  }
 
   return (
     <div className="h-24 border-t border-border/50 glass-panel px-4 py-3">
@@ -42,19 +134,78 @@ export function Timeline({
         <div className="flex items-center gap-4">
           <span className="text-xs font-mono text-muted-foreground w-12">LAP 1</span>
           <div className="flex-1 relative">
+            {/* Flag period overlays - behind slider */}
+            {flagPeriods.map((period, idx) => {
+              const leftPercent = lapToPercent(period.startLap)
+              const rightPercent = lapToPercent(period.endLap)
+              const width = Math.max(rightPercent - leftPercent, 1) // Minimum 1% width for visibility
+
+              return (
+                <div
+                  key={`flag-${period.type}-${idx}`}
+                  className={`absolute top-1/2 -translate-y-1/2 h-3 rounded-sm pointer-events-none ${
+                    period.type === "RED" ? "bg-destructive/40" : "bg-yellow-500/40"
+                  }`}
+                  style={{
+                    left: `${leftPercent}%`,
+                    width: `${width}%`,
+                  }}
+                  title={`${period.type === "RED" ? "Red Flag" : period.type === "VSC" ? "Virtual Safety Car" : "Safety Car"} (Lap ${period.startLap}-${period.endLap})`}
+                />
+              )
+            })}
+
             <Slider
               value={[currentLap]}
               min={1}
               max={totalLaps}
               step={1}
               onValueChange={([value]) => onLapChange(value)}
-              className="cursor-pointer"
+              className="cursor-pointer relative z-10"
             />
+
             {/* Progress glow */}
             <div
               className="absolute top-1/2 left-0 h-1 bg-primary/30 rounded-full -translate-y-1/2 pointer-events-none"
               style={{ width: `${progress}%` }}
             />
+
+            {/* Pit stop markers - above slider */}
+            <div className="absolute inset-0 pointer-events-none z-20">
+              {pitStops?.map((stop, idx) => {
+                const driver = driverMap.get(stop.driver_number)
+                const leftPercent = lapToPercent(stop.lap_number)
+
+                return (
+                  <div
+                    key={`pit-${stop.driver_number}-${stop.lap_number}-${idx}`}
+                    className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2 h-2 rounded-full pointer-events-auto cursor-pointer group z-30"
+                    style={{
+                      left: `${leftPercent}%`,
+                      backgroundColor: driver?.teamColor || "#888",
+                    }}
+                  >
+                    {/* Hover tooltip */}
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                      <div className="glass-panel px-2 py-1 rounded text-xs whitespace-nowrap shadow-lg">
+                        <span
+                          className="font-mono font-bold"
+                          style={{ color: driver?.teamColor || "#888" }}
+                        >
+                          {driver?.code || `#${stop.driver_number}`}
+                        </span>
+                        <span className="text-muted-foreground ml-1">L{stop.lap_number}</span>
+                        {stop.pit_duration && (
+                          <span className="text-muted-foreground ml-1">
+                            ({stop.pit_duration.toFixed(1)}s)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
           <span className="text-xs font-mono text-muted-foreground w-16 text-right">LAP {totalLaps}</span>
         </div>

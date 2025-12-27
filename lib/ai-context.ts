@@ -189,41 +189,90 @@ export function getRecentPitStops(
 }
 
 /**
+ * Represents a flag period (SC, VSC, or Red Flag)
+ */
+interface FlagPeriod {
+  type: "SC" | "VSC" | "RED"
+  startLap: number
+  endLap: number
+}
+
+/**
+ * Parse race control events into flag periods with start/end laps
+ */
+function parseFlagPeriods(raceControl: OpenF1RaceControl[]): FlagPeriod[] {
+  const periods: FlagPeriod[] = []
+  let currentPeriod: FlagPeriod | null = null
+
+  // Sort by date to process events in chronological order
+  const sorted = [...raceControl].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+  )
+
+  for (const event of sorted) {
+    const msg = event.message?.toUpperCase() || ""
+    const lap = event.lap_number
+
+    if (lap === null) continue
+
+    // SC start
+    if (msg.includes("SAFETY CAR DEPLOYED") || msg.includes("SC DEPLOYED")) {
+      if (currentPeriod) currentPeriod.endLap = lap - 1
+      currentPeriod = { type: "SC", startLap: lap, endLap: 999 }
+      periods.push(currentPeriod)
+    }
+    // VSC start
+    else if (msg.includes("VSC DEPLOYED") || msg.includes("VIRTUAL SAFETY CAR DEPLOYED")) {
+      if (currentPeriod) currentPeriod.endLap = lap - 1
+      currentPeriod = { type: "VSC", startLap: lap, endLap: 999 }
+      periods.push(currentPeriod)
+    }
+    // Red flag
+    else if (event.flag === "RED") {
+      if (currentPeriod) currentPeriod.endLap = lap - 1
+      currentPeriod = { type: "RED", startLap: lap, endLap: 999 }
+      periods.push(currentPeriod)
+    }
+    // End conditions
+    else if (
+      msg.includes("SAFETY CAR IN") ||
+      msg.includes("SC IN THIS LAP") ||
+      msg.includes("VSC ENDING") ||
+      event.flag === "GREEN"
+    ) {
+      if (currentPeriod) {
+        currentPeriod.endLap = lap
+        currentPeriod = null
+      }
+    }
+  }
+
+  return periods
+}
+
+/**
  * Get active flags/safety car status at current lap
  */
 export function getActiveFlags(
   raceControl: OpenF1RaceControl[],
   currentLap: number
 ): string[] {
-  // Filter race control messages for flags that are relevant to current lap
-  const relevantFlags = raceControl
-    .filter((rc) => {
-      // Must have a lap number
-      if (rc.lap_number === null) return false
-      // Must be from current lap or before
-      if (rc.lap_number > currentLap) return false
-      // Check for safety car/VSC in message (these may not have a flag field)
-      const hasSafetyCarMessage = rc.message &&
-        (rc.message.includes("SAFETY CAR") || rc.message.includes("VSC"))
-      // Include if it has a significant flag OR a safety car message
-      return (rc.flag && ["YELLOW", "RED", "GREEN", "CHEQUERED", "BLACK AND WHITE"].includes(rc.flag)) ||
-        hasSafetyCarMessage
-    })
-    .sort((a, b) => (b.lap_number || 0) - (a.lap_number || 0))
-
-  // Get the most recent flag status
   const flags: string[] = []
 
-  if (relevantFlags.length > 0) {
-    const latest = relevantFlags[0]
+  // Parse all flag periods from race control events
+  const flagPeriods = parseFlagPeriods(raceControl)
 
-    // Check for safety car in message
-    if (latest.message?.includes("SAFETY CAR DEPLOYED") || latest.message?.includes("SC DEPLOYED")) {
-      flags.push("SAFETY CAR")
-    } else if (latest.message?.includes("VSC DEPLOYED") || latest.message?.includes("VIRTUAL SAFETY CAR")) {
-      flags.push("VIRTUAL SAFETY CAR")
-    } else if (latest.flag && latest.flag !== "GREEN") {
-      flags.push(latest.flag + " FLAG")
+  // Check if current lap falls within any active period
+  for (const period of flagPeriods) {
+    if (currentLap >= period.startLap && currentLap <= period.endLap) {
+      if (period.type === "SC") {
+        flags.push("SAFETY CAR")
+      } else if (period.type === "VSC") {
+        flags.push("VIRTUAL SAFETY CAR")
+      } else if (period.type === "RED") {
+        flags.push("RED FLAG")
+      }
+      break // Only show one active flag status
     }
   }
 
