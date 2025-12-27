@@ -95,6 +95,42 @@ export function lerp(a: number, b: number, t: number): number {
 }
 
 /**
+ * Easing function: ease-in-out cubic
+ * Smooth acceleration and deceleration
+ */
+export function easeInOutCubic(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+}
+
+/**
+ * Easing function: smooth step
+ * Ken Perlin's improved smooth step function
+ */
+export function smoothStep(t: number): number {
+  return t * t * (3 - 2 * t)
+}
+
+/**
+ * Easing function: smoother step (Ken Perlin)
+ * Even smoother than smoothStep with zero second derivative at endpoints
+ */
+export function smootherStep(t: number): number {
+  return t * t * t * (t * (t * 6 - 15) + 10)
+}
+
+/**
+ * Apply easing to interpolation
+ */
+export function lerpWithEasing(
+  a: number,
+  b: number,
+  t: number,
+  easingFn: (t: number) => number = smoothStep
+): number {
+  return a + (b - a) * easingFn(t)
+}
+
+/**
  * Interpolate between two positions
  */
 export function interpolatePosition(
