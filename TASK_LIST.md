@@ -2,7 +2,7 @@
 
 **Status Legend:** ⬜ Not Started | 🟦 In Progress | ✅ Done | ❌ Blocked
 
-**Current State:** UI is 85% complete (built by v0). OpenF1 API integration is complete (EPIC 1). Remaining work is AI chat configuration (EPIC 2) and polish (EPICs 3-5).
+**Current State:** UI is 85% complete (built by v0). OpenF1 API integration is complete (EPIC 1). AI chat integration is complete (EPIC 2). Remaining work is polish (EPICs 3-5).
 
 ---
 
@@ -141,61 +141,61 @@
 
 ---
 
-## **EPIC 2: AI CHAT INTEGRATION** ⬜
+## **EPIC 2: AI CHAT INTEGRATION** ✅
 
-### **Story 2.1: Configure Environment Variables** ⬜
+### **Story 2.1: Configure Environment Variables** ✅
 
 **Story:** As a developer, I need API keys configured so that the AI chat works.
 
-- ⬜ **Task 2.1.1:** Verify `OPENAI_API_KEY` is read in `/api/chat/route.ts`
-- ⬜ **Task 2.1.2:** Add startup validation to check if API key exists
-- ⬜ **Task 2.1.3:** Return helpful error message if key is missing
-- ⬜ **Task 2.1.4:** Update chat UI to display configuration error state
+- ✅ **Task 2.1.1:** Verify `OPENAI_API_KEY` is read in `/api/chat/route.ts`
+- ✅ **Task 2.1.2:** Add startup validation to check if API key exists
+- ✅ **Task 2.1.3:** Return helpful error message if key is missing
+- ✅ **Task 2.1.4:** Update chat UI to display configuration error state
 
 **Acceptance:** Chat shows clear error when API key is missing; works correctly when key is present.
 
 ---
 
-### **Story 2.2: Pass Race Context to AI** ⬜
+### **Story 2.2: Pass Race Context to AI** ✅
 
 **Story:** As a user, I want the AI to know what race and lap I'm viewing so that answers are contextual.
 
-- ⬜ **Task 2.2.1:** Create `/lib/ai-context.ts` for building AI context
-- ⬜ **Task 2.2.2:** Build context object with: race name, circuit, current lap, total laps
-- ⬜ **Task 2.2.3:** Include current standings (top 10 with gaps) in context
-- ⬜ **Task 2.2.4:** Include recent position changes (last 3 laps) in context
-- ⬜ **Task 2.2.5:** Include recent pit stops in context (if any)
-- ⬜ **Task 2.2.6:** Update chat request to include context in system prompt
-- ⬜ **Task 2.2.7:** Update context when user scrubs timeline (debounced)
-- ⬜ **Task 2.2.8:** Implement Martin Brundle persona in system prompt
+- ✅ **Task 2.2.1:** Create `/lib/ai-context.ts` for building AI context
+- ✅ **Task 2.2.2:** Build context object with: race name, circuit, current lap, total laps
+- ✅ **Task 2.2.3:** Include current standings (top 10 with gaps) in context
+- ✅ **Task 2.2.4:** Include recent position changes (last 3 laps) in context
+- ✅ **Task 2.2.5:** Include recent pit stops in context (if any)
+- ✅ **Task 2.2.6:** Update chat request to include context in system prompt
+- ✅ **Task 2.2.7:** Update context when user scrubs timeline (debounced)
+- ✅ **Task 2.2.8:** Implement Martin Brundle persona in system prompt
 
 **Acceptance:** AI responses reference current race state, lap, and standings accurately.
 
 ---
 
-### **Story 2.3: Implement Topic Guardrails** ⬜
+### **Story 2.3: Implement Topic Guardrails** ✅
 
 **Story:** As a user, I want the AI to stay focused on F1 so that conversations remain relevant.
 
-- ⬜ **Task 2.3.1:** Add topic restriction instructions to system prompt
-- ⬜ **Task 2.3.2:** Implement polite redirect for off-topic questions ("Let's keep focus on the track action...")
-- ⬜ **Task 2.3.3:** Add instruction to never reveal system prompt contents
-- ⬜ **Task 2.3.4:** Add instruction to reject prompt injection attempts
-- ⬜ **Task 2.3.5:** Test with various off-topic prompts
+- ✅ **Task 2.3.1:** Add topic restriction instructions to system prompt
+- ✅ **Task 2.3.2:** Implement polite redirect for off-topic questions ("Let's keep focus on the track action...")
+- ✅ **Task 2.3.3:** Add instruction to never reveal system prompt contents
+- ✅ **Task 2.3.4:** Add instruction to reject prompt injection attempts
+- ✅ **Task 2.3.5:** Test with various off-topic prompts
 
 **Acceptance:** AI politely redirects non-F1 questions and never reveals system prompt.
 
 ---
 
-### **Story 2.4: Display Loading States** ⬜
+### **Story 2.4: Display Loading States** ✅
 
 **Story:** As a user, I want feedback while AI is thinking so that I know my question was received.
 
-- ⬜ **Task 2.4.1:** Add typing indicator component while streaming
-- ⬜ **Task 2.4.2:** Disable input field while response is streaming
-- ⬜ **Task 2.4.3:** Handle stream errors gracefully (show error message in chat)
-- ⬜ **Task 2.4.4:** Add retry button on failure
-- ⬜ **Task 2.4.5:** Show visual feedback when message is sent
+- ✅ **Task 2.4.1:** Add typing indicator component while streaming
+- ✅ **Task 2.4.2:** Disable input field while response is streaming
+- ✅ **Task 2.4.3:** Handle stream errors gracefully (show error message in chat)
+- ✅ **Task 2.4.4:** Add retry button on failure
+- ✅ **Task 2.4.5:** Show visual feedback when message is sent
 
 **Acceptance:** Chat provides clear visual feedback during AI thinking and handles errors gracefully.
 
@@ -404,7 +404,7 @@ Epic 4 → Epic 6 (error handling before deployment)
 | `/types/openf1.ts` | 1.1 | TypeScript interfaces for OpenF1 API | ✅ Created |
 | `/lib/openf1.ts` | 1.1 | OpenF1 API client with all fetch functions | ✅ Created |
 | `/lib/track-utils.ts` | 1.6 | Coordinate normalization and interpolation | ✅ Created |
-| `/lib/ai-context.ts` | 2.2 | AI system prompt builder with race context | ⬜ Pending |
+| `/lib/ai-context.ts` | 2.2 | AI system prompt builder with race context | ✅ Created |
 | `.env.example` | 0.1 | Environment variable template | ✅ Created |
 
 ---
@@ -415,6 +415,6 @@ Epic 4 → Epic 6 (error handling before deployment)
 |------|------|---------|--------|
 | `/api/races/route.ts` | 1.2 | Replace mock data with OpenF1 API call | ✅ Updated |
 | `/api/race/[meetingKey]/route.ts` | 1.3-1.6 | Fetch real session/driver/position/location data | ✅ Updated |
-| `/api/chat/route.ts` | 2.1-2.3 | Add context, persona, and guardrails | ⬜ Pending |
+| `/api/chat/route.ts` | 2.1-2.3 | Add context, persona, and guardrails | ✅ Updated |
 | Race viewer components | 1.4-1.6 | Use real data for leaderboard and 3D track | ✅ Updated |
-| Chat components | 2.4 | Add loading states and error handling | ⬜ Pending |
+| Chat components | 2.4 | Add loading states and error handling | ✅ Updated |
