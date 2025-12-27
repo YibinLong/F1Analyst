@@ -17,6 +17,8 @@ import {
 } from "@/lib/track-utils"
 import { TrackVisualizationErrorBoundary } from "@/components/error-boundary"
 import { LocationDataUnavailable } from "./data-unavailable"
+import { Track3D } from "./Track3D"
+import { F1Car } from "./F1Car"
 
 interface Standing {
   position: number
@@ -159,6 +161,7 @@ function Car({
 /**
  * AnimatedCar - Uses useFrame for smooth 60fps position interpolation
  * Directly mutates position via refs instead of React state for performance
+ * Now uses the new F1Car component with rotation tracking
  */
 function AnimatedCar({
   driverNumber,
@@ -181,6 +184,8 @@ function AnimatedCar({
 }) {
   const groupRef = useRef<THREE.Group>(null)
   const targetPosition = useRef({ x: 0, y: 0.15, z: 0 })
+  const previousPosition = useRef({ x: 0, y: 0.15, z: 0 })
+  const currentRotation = useRef(0)
 
   // Calculate target position based on current lap and progress
   useEffect(() => {
@@ -195,8 +200,12 @@ function AnimatedCar({
   useFrame(() => {
     if (!groupRef.current) return
 
+    // Store previous position for rotation calculation
+    const prevX = groupRef.current.position.x
+    const prevZ = groupRef.current.position.z
+
     // Smoothly lerp to target position (higher factor = faster response)
-    const lerpFactor = 0.15
+    const lerpFactor = 0.12
 
     groupRef.current.position.lerp(
       tempVec.set(
@@ -206,25 +215,34 @@ function AnimatedCar({
       ),
       lerpFactor
     )
+
+    // Calculate rotation based on movement direction
+    const dx = groupRef.current.position.x - prevX
+    const dz = groupRef.current.position.z - prevZ
+    const distance = Math.sqrt(dx * dx + dz * dz)
+
+    if (distance > 0.0005) {
+      // Calculate target rotation from movement direction
+      const targetRotation = Math.atan2(dx, dz)
+
+      // Smooth rotation with wrap-around handling
+      let rotationDiff = targetRotation - currentRotation.current
+      if (rotationDiff > Math.PI) rotationDiff -= Math.PI * 2
+      if (rotationDiff < -Math.PI) rotationDiff += Math.PI * 2
+
+      currentRotation.current += rotationDiff * 0.08
+      groupRef.current.rotation.y = currentRotation.current
+    }
   })
 
   return (
     <group ref={groupRef} position={[targetPosition.current.x, targetPosition.current.y, targetPosition.current.z]}>
-      {/* Car body */}
-      <mesh>
-        <boxGeometry args={[0.3, 0.1, 0.15]} />
-        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.3} />
-      </mesh>
-
-      {/* Motion trail */}
-      <mesh position={[-0.3, 0, 0]}>
-        <boxGeometry args={[0.4, 0.02, 0.08]} />
-        <meshStandardMaterial color={color} transparent opacity={0.4} />
-      </mesh>
-      <mesh position={[-0.6, 0, 0]}>
-        <boxGeometry args={[0.3, 0.02, 0.06]} />
-        <meshStandardMaterial color={color} transparent opacity={0.2} />
-      </mesh>
+      <F1Car
+        position={[0, 0, 0]}
+        teamColor={color}
+        driverNumber={driverNumber}
+        showTrail={true}
+      />
     </group>
   )
 }
@@ -233,10 +251,12 @@ function CarFallback({
   color,
   index,
   trackId,
+  driverNumber,
 }: {
   color: string
   index: number
   trackId: string
+  driverNumber: number
 }) {
   const path = trackPaths[trackId] || trackPaths.default
   const points = useMemo(() => pathToPoints(path, 0.15), [path])
@@ -245,14 +265,23 @@ function CarFallback({
   const pointIndex = Math.floor((index / 20) * points.length * 0.8) % points.length
   const carPosition = points[pointIndex] || [0, 0, 0]
 
+  // Calculate rotation based on track direction at this point
+  const nextPointIndex = (pointIndex + 1) % points.length
+  const nextPoint = points[nextPointIndex] || carPosition
+  const rotation = Math.atan2(
+    nextPoint[0] - carPosition[0],
+    nextPoint[2] - carPosition[2]
+  )
+
   return (
-    <Car
-      position={index + 1}
-      color={color}
-      x={carPosition[0]}
-      y={0.15}
-      z={carPosition[2]}
-    />
+    <group position={[carPosition[0], 0.15, carPosition[2]]} rotation={[0, rotation, 0]}>
+      <F1Car
+        position={[0, 0, 0]}
+        teamColor={color}
+        driverNumber={driverNumber}
+        showTrail={false}
+      />
+    </group>
   )
 }
 
@@ -299,7 +328,7 @@ function Scene({
       <pointLight position={[10, 10, 10]} intensity={0.5} color="#00d4ff" />
       <pointLight position={[-10, 10, -10]} intensity={0.3} color="#00ffc8" />
 
-      <Track trackId={trackId} />
+      <Track3D trackId={trackId} />
 
       {standings.slice(0, 20).map((standing, index) => {
         const driverLocations = locationsByDriver?.get(standing.driver.number)
@@ -325,14 +354,14 @@ function Scene({
         const realPos = carPositions.get(standing.driver.number)
         if (useRealPositions && realPos) {
           return (
-            <Car
-              key={standing.driver.number}
-              position={standing.position}
-              color={standing.driver.teamColor}
-              x={realPos.x}
-              y={realPos.y}
-              z={realPos.z}
-            />
+            <group key={standing.driver.number} position={[realPos.x, realPos.y, realPos.z]}>
+              <F1Car
+                position={[0, 0, 0]}
+                teamColor={standing.driver.teamColor}
+                driverNumber={standing.driver.number}
+                showTrail={true}
+              />
+            </group>
           )
         }
 
@@ -343,6 +372,7 @@ function Scene({
             color={standing.driver.teamColor}
             index={index}
             trackId={trackId}
+            driverNumber={standing.driver.number}
           />
         )
       })}
