@@ -2,7 +2,7 @@
 
 **Status Legend:** ⬜ Not Started | 🟦 In Progress | ✅ Done | ❌ Blocked
 
-**Current State:** UI is 85% complete (built by v0). OpenF1 API integration is complete (EPIC 1). AI chat integration is complete (EPIC 2). Data caching & performance is complete (EPIC 3). Remaining work is polish (EPICs 4-5).
+**Current State:** UI is 85% complete (built by v0). OpenF1 API integration is complete (EPIC 1). AI chat integration is complete (EPIC 2). Data caching & performance is complete (EPIC 3). Error handling & reliability is complete (EPIC 4). Remaining work is polish (EPIC 5) and testing/deployment (EPIC 6).
 
 ---
 
@@ -246,46 +246,46 @@
 
 ---
 
-## **EPIC 4: ERROR HANDLING & RELIABILITY** ⬜
+## **EPIC 4: ERROR HANDLING & RELIABILITY** ✅
 
-### **Story 4.1: Add API Error Boundaries** ⬜
+### **Story 4.1: Add API Error Boundaries** ✅
 
 **Story:** As a user, I want to see helpful error messages instead of crashes when something goes wrong.
 
-- ⬜ **Task 4.1.1:** Create error boundary component for race viewer
-- ⬜ **Task 4.1.2:** Design friendly error UI with retry button
-- ⬜ **Task 4.1.3:** Wrap race viewer in error boundary
-- ⬜ **Task 4.1.4:** Log errors for debugging (console in dev)
-- ⬜ **Task 4.1.5:** Ensure fallback UI is displayed (never blank screen)
+- ✅ **Task 4.1.1:** Create error boundary component for race viewer
+- ✅ **Task 4.1.2:** Design friendly error UI with retry button
+- ✅ **Task 4.1.3:** Wrap race viewer in error boundary
+- ✅ **Task 4.1.4:** Log errors for debugging (console in dev)
+- ✅ **Task 4.1.5:** Ensure fallback UI is displayed (never blank screen)
 
 **Acceptance:** Errors are caught and displayed with helpful message and retry option.
 
 ---
 
-### **Story 4.2: Handle Missing Race Data** ⬜
+### **Story 4.2: Handle Missing Race Data** ✅
 
 **Story:** As a user, I want to understand when data is unavailable so that I'm not confused.
 
-- ⬜ **Task 4.2.1:** Create "Race data not yet available" component for future races
-- ⬜ **Task 4.2.2:** Create "Data unavailable" component for API issues
-- ⬜ **Task 4.2.3:** Implement graceful partial data handling (show what's available)
-- ⬜ **Task 4.2.4:** Ensure app never crashes on missing data
-- ⬜ **Task 4.2.5:** Add loading states for each data type independently
+- ✅ **Task 4.2.1:** Create "Race data not yet available" component for future races
+- ✅ **Task 4.2.2:** Create "Data unavailable" component for API issues
+- ✅ **Task 4.2.3:** Implement graceful partial data handling (show what's available)
+- ✅ **Task 4.2.4:** Ensure app never crashes on missing data
+- ✅ **Task 4.2.5:** Add loading states for each data type independently
 
 **Acceptance:** Users see clear messaging when data is unavailable; app never crashes.
 
 ---
 
-### **Story 4.3: Validate API Responses** ⬜
+### **Story 4.3: Validate API Responses** ✅
 
 **Story:** As a developer, I need data validation so that bad API responses don't break the app.
 
-- ⬜ **Task 4.3.1:** Install Zod for runtime validation
-- ⬜ **Task 4.3.2:** Create Zod schemas for all OpenF1 response types
-- ⬜ **Task 4.3.3:** Validate API responses in OpenF1 client
-- ⬜ **Task 4.3.4:** Log validation errors to console
-- ⬜ **Task 4.3.5:** Return safe defaults for invalid data
-- ⬜ **Task 4.3.6:** Ensure TypeScript types match Zod schemas
+- ✅ **Task 4.3.1:** Install Zod for runtime validation *(Already installed: v3.25.76)*
+- ✅ **Task 4.3.2:** Create Zod schemas for all OpenF1 response types
+- ✅ **Task 4.3.3:** Validate API responses in OpenF1 client
+- ✅ **Task 4.3.4:** Log validation errors to console
+- ✅ **Task 4.3.5:** Return safe defaults for invalid data
+- ✅ **Task 4.3.6:** Ensure TypeScript types match Zod schemas
 
 **Acceptance:** Invalid API responses are caught, logged, and handled gracefully.
 
@@ -516,6 +516,9 @@ Story 1.4 → Story 5.7 (position data required to detect overtakes)
 | `/lib/track-utils.ts` | 1.6 | Coordinate normalization and interpolation | ✅ Created |
 | `/lib/ai-context.ts` | 2.2 | AI system prompt builder with race context | ✅ Created |
 | `.env.example` | 0.1 | Environment variable template | ✅ Created |
+| `/lib/openf1-schemas.ts` | 4.3 | Zod schemas for OpenF1 API validation | ✅ Created |
+| `/components/error-boundary.tsx` | 4.1 | Reusable error boundary components | ✅ Created |
+| `/components/race-viewer/data-unavailable.tsx` | 4.2 | Data unavailable UI components | ✅ Created |
 | `/public/tracks/*.svg` | 5.4 | Circuit SVG files from Wikimedia Commons | ⬜ Not Started |
 | `/public/models/f1-car.glb` | 5.5 | Low-poly F1 car model (GLB/GLTF) | ⬜ Not Started |
 | `/components/race-viewer/F1Car.tsx` | 5.5 | Reusable F1 car 3D component | ⬜ Not Started |
@@ -536,6 +539,10 @@ Story 1.4 → Story 5.7 (position data required to detect overtakes)
 | `/api/chat/route.ts` | 2.1-2.3 | Add context, persona, and guardrails | ✅ Updated |
 | Race viewer components | 1.4-1.6 | Use real data for leaderboard and 3D track | ✅ Updated |
 | Chat components | 2.4 | Add loading states and error handling | ✅ Updated |
+| `/lib/openf1.ts` | 4.3 | Add Zod validation to all fetch functions | ✅ Updated |
+| `/app/race/[meetingKey]/page.tsx` | 4.1 | Wrap in RaceViewerErrorBoundary | ✅ Updated |
+| `/components/race-viewer/track-visualization.tsx` | 4.1-4.2 | Add error boundary and location unavailable overlay | ✅ Updated |
+| `/components/race-viewer/leaderboard.tsx` | 4.2 | Add missing data handling | ✅ Updated |
 | `/components/race-viewer/TrackVisualization.tsx` | 5.4-5.6 | Load circuit SVGs, replace rectangles with F1 car models, add click detection | ⬜ Not Started |
 | `/types/openf1.ts` | 5.8-5.9 | Add Weather and TeamRadio types | ⬜ Not Started |
 | `/lib/openf1.ts` | 5.8-5.9 | Add getWeather() and getTeamRadio() functions | ⬜ Not Started |
