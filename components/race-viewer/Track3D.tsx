@@ -150,15 +150,41 @@ export function Track3D({ trackId }: Track3DProps) {
           })
         })
 
-        // Add start/finish marker
-        const startFinishGeometry = new THREE.BoxGeometry(0.5, 0.02, 0.08)
+        // Add start/finish marker at first path point
+        // Most F1 track SVGs start at or near the start/finish line
+        const startFinishGeometry = new THREE.BoxGeometry(0.6, 0.03, 0.12)
         const startFinishMaterial = new THREE.MeshStandardMaterial({
           color: 0xffffff,
           emissive: 0xffffff,
-          emissiveIntensity: 0.5,
+          emissiveIntensity: 0.7,
         })
         const startFinishMesh = new THREE.Mesh(startFinishGeometry, startFinishMaterial)
-        startFinishMesh.position.set(0, 0.05, 0)
+
+        // Get the first point of the first path as start/finish position
+        let startX = 0
+        let startZ = 0
+        if (paths.length > 0 && paths[0].subPaths.length > 0) {
+          const firstSubPath = paths[0].subPaths[0]
+          const firstPoints = firstSubPath.getPoints()
+          if (firstPoints.length > 0) {
+            startX = (firstPoints[0].x - centerX) * scale
+            startZ = (firstPoints[0].y - centerY) * scale
+          }
+        }
+        startFinishMesh.position.set(startX, 0.05, startZ)
+
+        // Calculate rotation to align with track direction at start
+        if (paths.length > 0 && paths[0].subPaths.length > 0) {
+          const firstSubPath = paths[0].subPaths[0]
+          const firstPoints = firstSubPath.getPoints()
+          if (firstPoints.length > 1) {
+            const dx = firstPoints[1].x - firstPoints[0].x
+            const dy = firstPoints[1].y - firstPoints[0].y
+            const angle = Math.atan2(dy, dx)
+            startFinishMesh.rotation.y = -angle
+          }
+        }
+
         group.add(startFinishMesh)
 
         setTrackGroup(group)
