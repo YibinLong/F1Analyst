@@ -12,6 +12,19 @@ import type {
   OpenF1PitStop,
   OpenF1RaceControl,
 } from "@/types/openf1"
+import {
+  OpenF1MeetingSchema,
+  OpenF1SessionSchema,
+  OpenF1DriverSchema,
+  OpenF1LocationSchema,
+  OpenF1PositionSchema,
+  OpenF1IntervalSchema,
+  OpenF1LapSchema,
+  OpenF1PitStopSchema,
+  OpenF1RaceControlSchema,
+  validateArray,
+} from "@/lib/openf1-schemas"
+import type { z } from "zod"
 
 const BASE_URL = process.env.OPENF1_API_URL || "https://api.openf1.org/v1"
 const REQUEST_TIMEOUT = 10000 // 10 seconds
@@ -99,7 +112,9 @@ async function fetchOpenF1<T>(
  * @param year - The year to fetch meetings for (e.g., 2025)
  */
 export async function getMeetings(year: number): Promise<OpenF1Meeting[] | null> {
-  return fetchOpenF1<OpenF1Meeting>("/meetings", { year })
+  const data = await fetchOpenF1<OpenF1Meeting>("/meetings", { year })
+  if (!data) return null
+  return validateArray(data, OpenF1MeetingSchema, "/meetings") as OpenF1Meeting[]
 }
 
 /**
@@ -111,11 +126,13 @@ export async function getSession(
   meetingKey: number,
   sessionName: string
 ): Promise<OpenF1Session | null> {
-  const sessions = await fetchOpenF1<OpenF1Session>("/sessions", {
+  const data = await fetchOpenF1<OpenF1Session>("/sessions", {
     meeting_key: meetingKey,
     session_name: sessionName,
   })
-  return sessions?.[0] || null
+  if (!data) return null
+  const validated = validateArray(data, OpenF1SessionSchema, "/sessions") as OpenF1Session[]
+  return validated[0] || null
 }
 
 /**
@@ -123,7 +140,9 @@ export async function getSession(
  * @param meetingKey - The meeting key
  */
 export async function getSessions(meetingKey: number): Promise<OpenF1Session[] | null> {
-  return fetchOpenF1<OpenF1Session>("/sessions", { meeting_key: meetingKey })
+  const data = await fetchOpenF1<OpenF1Session>("/sessions", { meeting_key: meetingKey })
+  if (!data) return null
+  return validateArray(data, OpenF1SessionSchema, "/sessions") as OpenF1Session[]
 }
 
 /**
@@ -131,7 +150,9 @@ export async function getSessions(meetingKey: number): Promise<OpenF1Session[] |
  * @param sessionKey - The session key
  */
 export async function getDrivers(sessionKey: number): Promise<OpenF1Driver[] | null> {
-  return fetchOpenF1<OpenF1Driver>("/drivers", { session_key: sessionKey })
+  const data = await fetchOpenF1<OpenF1Driver>("/drivers", { session_key: sessionKey })
+  if (!data) return null
+  return validateArray(data, OpenF1DriverSchema, "/drivers") as OpenF1Driver[]
 }
 
 /**
@@ -147,7 +168,9 @@ export async function getLocations(
   if (driverNumber !== undefined) {
     params.driver_number = driverNumber
   }
-  return fetchOpenF1<OpenF1Location>("/location", params)
+  const data = await fetchOpenF1<OpenF1Location>("/location", params)
+  if (!data) return null
+  return validateArray(data, OpenF1LocationSchema, "/location") as OpenF1Location[]
 }
 
 /**
@@ -155,7 +178,9 @@ export async function getLocations(
  * @param sessionKey - The session key
  */
 export async function getPositions(sessionKey: number): Promise<OpenF1Position[] | null> {
-  return fetchOpenF1<OpenF1Position>("/position", { session_key: sessionKey })
+  const data = await fetchOpenF1<OpenF1Position>("/position", { session_key: sessionKey })
+  if (!data) return null
+  return validateArray(data, OpenF1PositionSchema, "/position") as OpenF1Position[]
 }
 
 /**
@@ -163,7 +188,9 @@ export async function getPositions(sessionKey: number): Promise<OpenF1Position[]
  * @param sessionKey - The session key
  */
 export async function getIntervals(sessionKey: number): Promise<OpenF1Interval[] | null> {
-  return fetchOpenF1<OpenF1Interval>("/intervals", { session_key: sessionKey })
+  const data = await fetchOpenF1<OpenF1Interval>("/intervals", { session_key: sessionKey })
+  if (!data) return null
+  return validateArray(data, OpenF1IntervalSchema, "/intervals") as OpenF1Interval[]
 }
 
 /**
@@ -179,7 +206,9 @@ export async function getLaps(
   if (driverNumber !== undefined) {
     params.driver_number = driverNumber
   }
-  return fetchOpenF1<OpenF1Lap>("/laps", params)
+  const data = await fetchOpenF1<OpenF1Lap>("/laps", params)
+  if (!data) return null
+  return validateArray(data, OpenF1LapSchema, "/laps") as OpenF1Lap[]
 }
 
 /**
@@ -187,7 +216,9 @@ export async function getLaps(
  * @param sessionKey - The session key
  */
 export async function getPitStops(sessionKey: number): Promise<OpenF1PitStop[] | null> {
-  return fetchOpenF1<OpenF1PitStop>("/pit", { session_key: sessionKey })
+  const data = await fetchOpenF1<OpenF1PitStop>("/pit", { session_key: sessionKey })
+  if (!data) return null
+  return validateArray(data, OpenF1PitStopSchema, "/pit") as OpenF1PitStop[]
 }
 
 /**
@@ -195,7 +226,9 @@ export async function getPitStops(sessionKey: number): Promise<OpenF1PitStop[] |
  * @param sessionKey - The session key
  */
 export async function getRaceControl(sessionKey: number): Promise<OpenF1RaceControl[] | null> {
-  return fetchOpenF1<OpenF1RaceControl>("/race_control", { session_key: sessionKey })
+  const data = await fetchOpenF1<OpenF1RaceControl>("/race_control", { session_key: sessionKey })
+  if (!data) return null
+  return validateArray(data, OpenF1RaceControlSchema, "/race_control") as OpenF1RaceControl[]
 }
 
 // Utility functions for data processing
