@@ -2,15 +2,22 @@
 
 import type React from "react"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useMemo } from "react"
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport, type UIMessage } from "ai"
-import { X, Send, Loader2, Bot, User } from "lucide-react"
+import { X, Send, Loader2, Bot, User, AlertCircle, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Race } from "@/lib/race-data"
 import type { Driver } from "@/lib/f1-teams"
+import type { OpenF1PitStop, OpenF1RaceControl } from "@/types/openf1"
 import { motion, AnimatePresence } from "framer-motion"
+import {
+  computePositionChanges,
+  getRecentPitStops,
+  getActiveFlags,
+  type EnhancedRaceContext,
+} from "@/lib/ai-context"
 
 interface Standing {
   position: number
@@ -22,34 +29,64 @@ interface Standing {
 interface ChatPanelProps {
   race: Race
   currentLap: number
+  totalLaps: number
   standings: Standing[]
+  pitStops: OpenF1PitStop[]
+  raceControl: OpenF1RaceControl[]
+  positionsByLap: Record<number, Record<number, number>>
+  drivers: Driver[]
   onClose: () => void
 }
 
-export function ChatPanel({ race, currentLap, standings, onClose }: ChatPanelProps) {
+export function ChatPanel({
+  race,
+  currentLap,
+  totalLaps,
+  standings,
+  pitStops,
+  raceControl,
+  positionsByLap,
+  drivers,
+  onClose,
+}: ChatPanelProps) {
   const [input, setInput] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Build race context for API requests
-  const raceContext = {
+  // Create driver map for efficient lookup
+  const driverMap = useMemo(() => {
+    const map = new Map<number, Driver>()
+    for (const driver of drivers) {
+      map.set(driver.number, driver)
+    }
+    return map
+  }, [drivers])
+
+  // Build enhanced race context for API requests
+  const raceContext: EnhancedRaceContext = useMemo(() => ({
     meetingName: race.meetingName,
     country: race.country,
     circuit: race.circuitKey,
     currentLap,
-    totalLaps: 57,
+    totalLaps,
     standings: standings.slice(0, 10).map((s) => ({
       position: s.position,
       driver: s.driver.code,
       team: s.driver.team,
       interval: s.interval,
     })),
-  }
+    recentPitStops: getRecentPitStops(pitStops, currentLap, 5, driverMap),
+    recentPositionChanges: computePositionChanges(positionsByLap, currentLap, 3, driverMap),
+    activeFlags: getActiveFlags(raceControl, currentLap),
+  }), [race, currentLap, totalLaps, standings, pitStops, raceControl, positionsByLap, driverMap])
 
-  const { messages, sendMessage, status } = useChat<UIMessage>({
+  const { messages, sendMessage, status, error, regenerate } = useChat<UIMessage>({
     transport: new DefaultChatTransport({
       api: "/api/chat",
       body: { raceContext },
     }),
+    onError: (err) => {
+      console.error("Chat error:", err)
+    },
   })
 
   const scrollToBottom = () => {
@@ -165,11 +202,50 @@ export function ChatPanel({ race, currentLap, standings, onClose }: ChatPanelPro
           </AnimatePresence>
         )}
 
-        {status === "streaming" && (
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span className="text-xs">Analyzing...</span>
+        {/* Typing indicator during streaming */}
+        {(status === "streaming" || status === "submitted") && (
+          <div className="flex gap-3">
+            <div className="p-1.5 rounded-md h-fit bg-primary/10">
+              <Bot className="w-4 h-4 text-primary" />
+            </div>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50">
+              <div className="flex gap-1">
+                <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+              </div>
+              <span className="text-xs text-muted-foreground ml-1">Analyzing race data...</span>
+            </div>
           </div>
+        )}
+
+        {/* Error state with retry button */}
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex gap-3"
+          >
+            <div className="p-1.5 rounded-md h-fit bg-destructive/10">
+              <AlertCircle className="w-4 h-4 text-destructive" />
+            </div>
+            <div className="flex-1">
+              <div className="px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/20">
+                <p className="text-sm text-destructive mb-2">
+                  {error.message || "An error occurred while analyzing the race."}
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => regenerate()}
+                  className="h-7 text-xs border-destructive/30 hover:bg-destructive/10"
+                >
+                  <RefreshCw className="w-3 h-3 mr-1" />
+                  Retry
+                </Button>
+              </div>
+            </div>
+          </motion.div>
         )}
 
         <div ref={messagesEndRef} />

@@ -189,7 +189,12 @@ export function RaceViewer({
             <ChatPanel
               race={race}
               currentLap={currentLap}
+              totalLaps={totalLaps}
               standings={standings}
+              pitStops={pitStops}
+              raceControl={raceControl}
+              positionsByLap={positionsByLap}
+              drivers={drivers}
               onClose={() => setIsChatOpen(false)}
             />
           </div>
