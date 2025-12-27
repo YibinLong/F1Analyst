@@ -52,19 +52,19 @@ function getFlagPeriods(raceControl: OpenF1RaceControl[], totalLaps: number): Fl
 
     // SC start
     if (msg.includes("SAFETY CAR DEPLOYED") || msg.includes("SC DEPLOYED")) {
-      if (currentPeriod) currentPeriod.endLap = lap
+      if (currentPeriod) currentPeriod.endLap = lap - 1
       currentPeriod = { type: "SC", startLap: lap, endLap: lap }
       periods.push(currentPeriod)
     }
     // VSC start
     else if (msg.includes("VSC DEPLOYED") || msg.includes("VIRTUAL SAFETY CAR DEPLOYED")) {
-      if (currentPeriod) currentPeriod.endLap = lap
+      if (currentPeriod) currentPeriod.endLap = lap - 1
       currentPeriod = { type: "VSC", startLap: lap, endLap: lap }
       periods.push(currentPeriod)
     }
     // Red flag
     else if (event.flag === "RED") {
-      if (currentPeriod) currentPeriod.endLap = lap
+      if (currentPeriod) currentPeriod.endLap = lap - 1
       currentPeriod = { type: "RED", startLap: lap, endLap: lap }
       periods.push(currentPeriod)
     }

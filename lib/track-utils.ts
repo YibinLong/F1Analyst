@@ -55,31 +55,43 @@ export function normalizeCoordinates(
 
 /**
  * Map normalized coordinates to 3D track space
- * The track visualization uses coordinates centered around (0, 0) with a scale factor
+ * The Track3D component loads SVGs with viewBox 200x120, centers them,
+ * and applies scale 0.1. However, the actual track paths typically
+ * occupy a smaller area within the viewBox (roughly 60-140 x 10-110).
+ *
+ * After Track3D processing:
+ * - Track paths get centered at origin (subtract ~100, ~60)
+ * - Scaled by 0.1
+ * - Resulting track spans roughly ±4 x ±5 in 3D space
+ *
+ * Car positions need to map to this same space.
  */
 export function mapToTrackSpace(
   normalizedX: number,
   normalizedY: number,
-  scale = 15 // Matches the track visualization scale
+  scaleX = 4,  // Matches actual track extent: ~80 units * 0.1 / 2 = 4
+  scaleZ = 5   // Matches actual track extent: ~100 units * 0.1 / 2 = 5
 ): { x: number; z: number } {
   // Map 0-1 to -scale to +scale range, centered
   return {
-    x: (normalizedX - 0.5) * 2 * scale,
-    z: (normalizedY - 0.5) * 2 * scale,
+    x: (normalizedX - 0.5) * 2 * scaleX,
+    z: (normalizedY - 0.5) * 2 * scaleZ,
   }
 }
 
 /**
  * Get car position from raw coordinates with bounds
+ * Uses scale values matching the Track3D rendered track
  */
 export function getCarPosition(
   x: number,
   y: number,
   bounds: TrackBounds,
-  scale = 15
+  scaleX = 4,  // Match mapToTrackSpace defaults
+  scaleZ = 5
 ): { x: number; y: number; z: number } {
   const normalized = normalizeCoordinates(x, y, bounds)
-  const mapped = mapToTrackSpace(normalized.x, normalized.y, scale)
+  const mapped = mapToTrackSpace(normalized.x, normalized.y, scaleX, scaleZ)
   return {
     x: mapped.x,
     y: 0.15, // Height above track surface
