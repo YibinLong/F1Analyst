@@ -2,7 +2,7 @@
 
 import { Canvas, useFrame } from "@react-three/fiber"
 import { OrbitControls, PerspectiveCamera, Environment } from "@react-three/drei"
-import { Suspense, useMemo, useRef, useEffect } from "react"
+import { Suspense, useMemo, useRef, useEffect, useState } from "react"
 import * as THREE from "three"
 import type { Driver } from "@/lib/f1-teams"
 import type { OpenF1Location, OpenF1Lap } from "@/types/openf1"
@@ -15,6 +15,12 @@ import {
   getInterpolatedPosition,
   type TrackBounds,
 } from "@/lib/track-utils"
+import {
+  fetchTrackPoints,
+  distributeCarPositions,
+  getDefaultTrackPoints,
+  type Track3DPoint,
+} from "@/lib/track-svg-utils"
 import { TrackVisualizationErrorBoundary } from "@/components/error-boundary"
 import { LocationDataUnavailable } from "./data-unavailable"
 import { Track3D } from "./Track3D"
@@ -247,42 +253,54 @@ function AnimatedCar({
   )
 }
 
+/**
+ * CarFallback - Positions cars ON the actual track path when location data is unavailable
+ * Uses SVG track points to distribute cars evenly along the circuit
+ */
 function CarFallback({
   color,
   index,
   trackId,
   driverNumber,
+  trackPoints,
+  totalCars = 20,
 }: {
   color: string
   index: number
   trackId: string
   driverNumber: number
+  trackPoints: Track3DPoint[]
+  totalCars?: number
 }) {
-  // Distribute cars around an ellipse that matches Track3D's rendered extent
-  // Track3D renders SVGs centered at origin, scaled by 0.1, resulting in ~±4 x ±5 extent
+  // Distribute cars evenly along the actual track path
   const { position, rotation } = useMemo(() => {
-    // Distribute cars evenly around an ellipse
-    const numCars = 20
-    const angle = ((index / numCars) * Math.PI * 2) + (Math.PI / 4) // Start at 45 degrees
+    if (trackPoints.length < 2) {
+      // Fallback to ellipse if no track points available
+      const numCars = totalCars
+      const angle = ((index / numCars) * Math.PI * 2) + (Math.PI / 4)
+      const radiusX = 3.5
+      const radiusZ = 4
+      const x = Math.cos(angle) * radiusX
+      const z = Math.sin(angle) * radiusZ
+      const nextAngle = angle + 0.1
+      const nextX = Math.cos(nextAngle) * radiusX
+      const nextZ = Math.sin(nextAngle) * radiusZ
+      const carRotation = Math.atan2(nextX - x, nextZ - z)
+      return {
+        position: [x, 0.15, z] as [number, number, number],
+        rotation: carRotation
+      }
+    }
 
-    // Ellipse matching typical track extent
-    const radiusX = 3.5  // Matches ~±4 track extent
-    const radiusZ = 4    // Matches ~±5 track extent
-
-    const x = Math.cos(angle) * radiusX
-    const z = Math.sin(angle) * radiusZ
-
-    // Rotation to face direction of travel (tangent to ellipse)
-    const nextAngle = angle + 0.1
-    const nextX = Math.cos(nextAngle) * radiusX
-    const nextZ = Math.sin(nextAngle) * radiusZ
-    const carRotation = Math.atan2(nextX - x, nextZ - z)
+    // Use the distribute function to place cars along actual track
+    const carPositions = distributeCarPositions(trackPoints, totalCars, 0.1)
+    const carData = carPositions[index % carPositions.length]
 
     return {
-      position: [x, 0.15, z] as [number, number, number],
-      rotation: carRotation
+      position: [carData.position.x, carData.position.y, carData.position.z] as [number, number, number],
+      rotation: carData.rotation
     }
-  }, [index])
+  }, [trackPoints, index, totalCars])
 
   return (
     <group position={position} rotation={[0, rotation, 0]}>
@@ -308,6 +326,8 @@ interface SceneProps {
   currentLap?: number
   lapProgress?: number
   totalLaps?: number
+  // Track points for fallback car positioning
+  trackPoints?: Track3DPoint[]
 }
 
 function Scene({
@@ -321,6 +341,7 @@ function Scene({
   currentLap = 1,
   lapProgress = 0,
   totalLaps = 57,
+  trackPoints = [],
 }: SceneProps) {
   return (
     <>
@@ -376,7 +397,7 @@ function Scene({
           )
         }
 
-        // Fallback to distribution along track
+        // Fallback to distribution along track using actual SVG path
         return (
           <CarFallback
             key={standing.driver.number}
@@ -384,6 +405,8 @@ function Scene({
             index={index}
             trackId={trackId}
             driverNumber={standing.driver.number}
+            trackPoints={trackPoints}
+            totalCars={Math.min(standings.length, 20)}
           />
         )
       })}
@@ -402,6 +425,28 @@ export function TrackVisualization({
   laps = [],
   totalLaps = 57,
 }: TrackVisualizationProps) {
+  // State for track path points (fetched from SVG)
+  const [trackPoints, setTrackPoints] = useState<Track3DPoint[]>([])
+
+  // Fetch track points from SVG when trackId changes
+  useEffect(() => {
+    let mounted = true
+
+    // Start with default points immediately for fast render
+    setTrackPoints(getDefaultTrackPoints(trackId, 100))
+
+    // Then fetch actual SVG points
+    fetchTrackPoints(trackId).then((points) => {
+      if (mounted && points.length > 0) {
+        setTrackPoints(points)
+      }
+    })
+
+    return () => {
+      mounted = false
+    }
+  }, [trackId])
+
   // Calculate track bounds and group locations (memoized for performance)
   const { trackBounds, locationsByDriver, raceTimeRange } = useMemo(() => {
     if (locations.length === 0) {
@@ -498,6 +543,7 @@ export function TrackVisualization({
               currentLap={currentLap}
               lapProgress={lapProgress}
               totalLaps={totalLaps}
+              trackPoints={trackPoints}
             />
           </Suspense>
         </Canvas>
