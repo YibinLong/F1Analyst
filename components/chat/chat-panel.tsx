@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useRef, useEffect, useMemo } from "react"
+import { useState, useRef, useEffect, useMemo, useCallback } from "react"
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport, type UIMessage } from "ai"
 import { X, Send, Loader2, Bot, User, AlertCircle, RefreshCw } from "lucide-react"
@@ -79,15 +79,33 @@ export function ChatPanel({
     activeFlags: getActiveFlags(raceControl, currentLap),
   }), [race, currentLap, totalLaps, standings, pitStops, raceControl, positionsByLap, driverMap])
 
-  // Memoize the transport to update when raceContext changes
-  // This ensures the AI always receives the current lap and standings
-  const transport = useMemo(() => new DefaultChatTransport({
-    api: "/api/chat",
-    body: { raceContext },
-  }), [raceContext])
+  // Store latest raceContext in a ref so transport always has current value
+  const raceContextRef = useRef(raceContext)
+  useEffect(() => {
+    raceContextRef.current = raceContext
+  }, [raceContext])
+
+  // Create a transport that reads from ref on each request
+  // This ensures the AI always receives the current lap context
+  const transport = useMemo(() => {
+    // Base transport for reconnectToStream (doesn't need dynamic context)
+    const baseTransport = new DefaultChatTransport({ api: "/api/chat" })
+
+    return {
+      sendMessages: (options: Parameters<InstanceType<typeof DefaultChatTransport>["sendMessages"]>[0]) => {
+        // Create transport with current context from ref on each call
+        const currentTransport = new DefaultChatTransport({
+          api: "/api/chat",
+          body: { raceContext: raceContextRef.current },
+        })
+        return currentTransport.sendMessages(options)
+      },
+      reconnectToStream: baseTransport.reconnectToStream.bind(baseTransport),
+    }
+  }, [])
 
   const { messages, sendMessage, status, error, regenerate } = useChat<UIMessage>({
-    id: "race-chat", // Fixed ID to preserve message history across context updates
+    id: "race-chat",
     transport,
     onError: (err) => {
       console.error("Chat error:", err)
