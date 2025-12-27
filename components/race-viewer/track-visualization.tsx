@@ -15,6 +15,8 @@ import {
   getInterpolatedPosition,
   type TrackBounds,
 } from "@/lib/track-utils"
+import { TrackVisualizationErrorBoundary } from "@/components/error-boundary"
+import { LocationDataUnavailable } from "./data-unavailable"
 
 interface Standing {
   position: number
@@ -434,22 +436,31 @@ export function TrackVisualization({
         </div>
       </div>
 
-      <Canvas>
-        <Suspense fallback={null}>
-          <Scene
-            trackId={trackId}
-            standings={standings}
-            carPositions={carPositions}
-            useRealPositions={useRealPositions}
-            locationsByDriver={locationsByDriver}
-            trackBounds={trackBounds}
-            raceTimeRange={raceTimeRange}
-            currentLap={currentLap}
-            lapProgress={lapProgress}
-            totalLaps={totalLaps}
-          />
-        </Suspense>
-      </Canvas>
+      {/* Location data unavailable overlay */}
+      {!useRealPositions && locations.length === 0 && (
+        <div className="absolute bottom-4 left-4 right-4 z-20">
+          <LocationDataUnavailable />
+        </div>
+      )}
+
+      <TrackVisualizationErrorBoundary>
+        <Canvas>
+          <Suspense fallback={null}>
+            <Scene
+              trackId={trackId}
+              standings={standings}
+              carPositions={carPositions}
+              useRealPositions={useRealPositions}
+              locationsByDriver={locationsByDriver}
+              trackBounds={trackBounds}
+              raceTimeRange={raceTimeRange}
+              currentLap={currentLap}
+              lapProgress={lapProgress}
+              totalLaps={totalLaps}
+            />
+          </Suspense>
+        </Canvas>
+      </TrackVisualizationErrorBoundary>
     </div>
   )
 }

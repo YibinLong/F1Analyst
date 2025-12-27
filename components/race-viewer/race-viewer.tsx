@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo, useEffect, useRef } from "react"
 import type { Race } from "@/lib/race-data"
-import type { Driver } from "@/lib/f1-teams"
+import { drivers2025, type Driver } from "@/lib/f1-teams"
 import type {
   OpenF1Location,
   OpenF1Lap,
@@ -74,9 +74,14 @@ export function RaceViewer({
   const animationFrameRef = useRef<number | null>(null)
   const lastTimestampRef = useRef<number>(0)
 
-  // Create a driver lookup map for efficient access
+  // Create a driver lookup map for efficient access, including fallback drivers
   const driverMap = useMemo(() => {
     const map = new Map<number, Driver>()
+    // First add fallback drivers from drivers2025
+    for (const driver of drivers2025) {
+      map.set(driver.number, driver)
+    }
+    // Then override with actual drivers from API (if any)
     for (const driver of drivers) {
       map.set(driver.number, driver)
     }

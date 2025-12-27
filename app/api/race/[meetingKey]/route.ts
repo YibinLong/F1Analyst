@@ -15,7 +15,7 @@ import {
   mapTeamNameToKey,
   mapCircuitToKey,
 } from "@/lib/openf1"
-import { teamColors, type Driver } from "@/lib/f1-teams"
+import { teamColors, drivers2025, type Driver } from "@/lib/f1-teams"
 import type { Race } from "@/lib/race-data"
 
 interface RouteParams {
@@ -80,19 +80,27 @@ export async function GET(request: Request, { params }: RouteParams) {
   // Calculate total laps
   const totalLaps = laps ? getMaxLapNumber(laps) : 0
 
-  // Map drivers to frontend format
-  const mappedDrivers: Driver[] = (drivers || []).map((d) => {
-    const teamKey = mapTeamNameToKey(d.team_name)
-    return {
-      number: d.driver_number,
-      code: d.name_acronym,
-      firstName: d.first_name,
-      lastName: d.last_name,
-      team: teamKey,
-      teamColor: d.team_colour ? `#${d.team_colour}` : teamColors[teamKey] || "#FFFFFF",
-      headshotUrl: d.headshot_url || undefined,
-    }
-  })
+  // Map drivers to frontend format, fallback to drivers2025 if API returns no data
+  let mappedDrivers: Driver[] = []
+
+  if (drivers && drivers.length > 0) {
+    // Use drivers from OpenF1 API
+    mappedDrivers = drivers.map((d) => {
+      const teamKey = mapTeamNameToKey(d.team_name)
+      return {
+        number: d.driver_number,
+        code: d.name_acronym,
+        firstName: d.first_name,
+        lastName: d.last_name,
+        team: teamKey,
+        teamColor: d.team_colour ? `#${d.team_colour}` : teamColors[teamKey] || "#FFFFFF",
+        headshotUrl: d.headshot_url || undefined,
+      }
+    })
+  } else {
+    // Fallback to hardcoded 2025 drivers when API doesn't have driver data
+    mappedDrivers = drivers2025
+  }
 
   // Calculate end date (usually 2 days after start)
   const startDate = new Date(meeting.date_start)
