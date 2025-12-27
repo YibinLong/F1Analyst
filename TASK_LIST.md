@@ -2,7 +2,7 @@
 
 **Status Legend:** ⬜ Not Started | 🟦 In Progress | ✅ Done | ❌ Blocked
 
-**Current State:** UI is 85% complete (built by v0). OpenF1 API integration is complete (EPIC 1). AI chat integration is complete (EPIC 2). Remaining work is polish (EPICs 3-5).
+**Current State:** UI is 85% complete (built by v0). OpenF1 API integration is complete (EPIC 1). AI chat integration is complete (EPIC 2). Data caching & performance is complete (EPIC 3). Remaining work is polish (EPICs 4-5).
 
 ---
 
@@ -201,46 +201,46 @@
 
 ---
 
-## **EPIC 3: DATA CACHING & PERFORMANCE** ⬜
+## **EPIC 3: DATA CACHING & PERFORMANCE** ✅
 
-### **Story 3.1: Cache Race Data on First Load** ⬜
+### **Story 3.1: Cache Race Data on First Load** ✅
 
 **Story:** As a user, I want the race to load quickly so that I can start watching without delay.
 
-- ⬜ **Task 3.1.1:** Create React context or state store for race data
-- ⬜ **Task 3.1.2:** Fetch all race data (positions, intervals, locations) on page load
-- ⬜ **Task 3.1.3:** Store fetched data in context/state
-- ⬜ **Task 3.1.4:** Ensure timeline scrubbing reads from cached data (no re-fetch)
-- ⬜ **Task 3.1.5:** Show loading skeleton while fetching initial data
-- ⬜ **Task 3.1.6:** Display loading progress for large data fetches
+- ✅ **Task 3.1.1:** Create React context or state store for race data *(Kept existing useState approach - adequate for current component tree)*
+- ✅ **Task 3.1.2:** Fetch all race data (positions, intervals, locations) on page load
+- ✅ **Task 3.1.3:** Store fetched data in context/state
+- ✅ **Task 3.1.4:** Ensure timeline scrubbing reads from cached data (no re-fetch)
+- ✅ **Task 3.1.5:** Show loading skeleton while fetching initial data
+- ✅ **Task 3.1.6:** Display loading progress for large data fetches
 
 **Acceptance:** Race data fetched once on load; scrubbing is instant with no additional API calls.
 
 ---
 
-### **Story 3.2: Implement Data Interpolation** ⬜
+### **Story 3.2: Implement Data Interpolation** ✅
 
 **Story:** As a user, I want smooth car movement so that the visualization looks polished.
 
-- ⬜ **Task 3.2.1:** Create interpolation utility in `/lib/track-utils.ts`
-- ⬜ **Task 3.2.2:** Implement linear interpolation between position data points
-- ⬜ **Task 3.2.3:** Interpolate from ~3.7 Hz source data to 60fps render
-- ⬜ **Task 3.2.4:** Smooth transitions between data points using easing
-- ⬜ **Task 3.2.5:** Test interpolation with actual OpenF1 data
+- ✅ **Task 3.2.1:** Create interpolation utility in `/lib/track-utils.ts`
+- ✅ **Task 3.2.2:** Implement linear interpolation between position data points
+- ✅ **Task 3.2.3:** Interpolate from ~3.7 Hz source data to 60fps render *(Using requestAnimationFrame + useFrame)*
+- ✅ **Task 3.2.4:** Smooth transitions between data points using easing *(Added easeInOutCubic, smoothStep, smootherStep)*
+- ✅ **Task 3.2.5:** Test interpolation with actual OpenF1 data
 
 **Acceptance:** Car animations are smooth at 60fps with no visible jumping between data points.
 
 ---
 
-### **Story 3.3: Handle Large Datasets** ⬜
+### **Story 3.3: Handle Large Datasets** ✅
 
 **Story:** As a user, I want the app to remain responsive even with large amounts of data.
 
-- ⬜ **Task 3.3.1:** Analyze memory usage with full race location data
-- ⬜ **Task 3.3.2:** Implement pagination for location data fetch (by time ranges) if needed
-- ⬜ **Task 3.3.3:** Only load data for current playback window if dataset too large
-- ⬜ **Task 3.3.4:** Virtualize leaderboard list if performance degrades
-- ⬜ **Task 3.3.5:** Implement garbage collection for old data segments if needed
+- ✅ **Task 3.3.1:** Analyze memory usage with full race location data *(Dev-mode logging added: ~4MB typical, well within limits)*
+- ✅ **Task 3.3.2:** Implement pagination for location data fetch (by time ranges) if needed *(Analysis: Not needed - data size manageable)*
+- ✅ **Task 3.3.3:** Only load data for current playback window if dataset too large *(Analysis: Not needed - full dataset fits in memory)*
+- ✅ **Task 3.3.4:** Virtualize leaderboard list if performance degrades *(Analysis: Not needed - only 20 items)*
+- ✅ **Task 3.3.5:** Implement garbage collection for old data segments if needed *(Analysis: Not needed - memory footprint acceptable)*
 
 **Acceptance:** App remains responsive (<16ms frame time) even with full race datasets.
 
@@ -335,6 +335,114 @@
 
 ---
 
+### **Story 5.4: Implement Circuit-Accurate Track SVGs** ⬜
+
+**Story:** As a user, I want to see accurate circuit layouts so that the 3D track matches real F1 circuits.
+
+- ⬜ **Task 5.4.1:** Source track SVG files from Wikimedia Commons for all 24 circuits
+- ⬜ **Task 5.4.2:** Create `/public/tracks/` directory and organize SVG assets by circuit name
+- ⬜ **Task 5.4.3:** Use `SVGLoader` from `@react-three/drei` to load circuit SVGs
+- ⬜ **Task 5.4.4:** Use `THREE.ExtrudeGeometry` to convert 2D SVG paths into 3D track mesh
+- ⬜ **Task 5.4.5:** Apply track styling (dark surface, glowing racing line, neon accents)
+- ⬜ **Task 5.4.6:** Map OpenF1 x,y coordinates to the SVG track coordinate space
+- ⬜ **Task 5.4.7:** Handle edge case: Missing SVG for a circuit → use generic oval fallback
+- ⬜ **Task 5.4.8:** Test track rendering for at least 5 different circuits
+
+**Acceptance:** 3D track visualization displays circuit-accurate layouts that match real F1 tracks.
+
+---
+
+### **Story 5.5: Add Low-Poly F1 Car Models** ⬜
+
+**Story:** As a user, I want to see realistic F1 car models so that the visualization looks polished and immersive.
+
+- ⬜ **Task 5.5.1:** Source low-poly F1 car GLB/GLTF model from Poly Pizza or Sketchfab (free, game-ready)
+- ⬜ **Task 5.5.2:** Add car model to `/public/models/` directory
+- ⬜ **Task 5.5.3:** Use `useGLTF` hook from `@react-three/drei` to load the car model
+- ⬜ **Task 5.5.4:** Create reusable `<F1Car />` component that accepts team color and position props
+- ⬜ **Task 5.5.5:** Apply team colors dynamically to car model materials
+- ⬜ **Task 5.5.6:** Replace current colored rectangles with F1 car models in TrackVisualization
+- ⬜ **Task 5.5.7:** Ensure car orientation follows track direction (rotation based on movement)
+- ⬜ **Task 5.5.8:** Optimize model for performance (20 cars at 60fps)
+- ⬜ **Task 5.5.9:** Add Akira-style motion trails behind cars (shader or particle effect)
+
+**Acceptance:** Race visualization displays 20 low-poly F1 car models colored by team, moving smoothly on track.
+
+---
+
+### **Story 5.6: Add Car Selection & Driver Highlight** ⬜
+
+**Story:** As a user, I want to click on a car in the 3D view to highlight that driver's information so that I can focus on specific drivers.
+
+- ⬜ **Task 5.6.1:** Add click detection to car meshes in TrackVisualization (raycast or onClick)
+- ⬜ **Task 5.6.2:** Create selected driver state (useState or context)
+- ⬜ **Task 5.6.3:** Highlight selected car with glow/outline effect
+- ⬜ **Task 5.6.4:** Highlight corresponding row in Leaderboard component
+- ⬜ **Task 5.6.5:** Create DriverDetailsPanel component (name, team, current position, gap, tire compound)
+- ⬜ **Task 5.6.6:** Position panel near selected car or in dedicated UI area
+- ⬜ **Task 5.6.7:** Add click-away or X button to deselect driver
+
+**Acceptance:** Clicking a car highlights it and its leaderboard row, showing detailed driver info; clicking away deselects.
+
+**Dependencies:** Story 5.5 (car models must exist to be clickable)
+
+---
+
+### **Story 5.7: Add Key Moments Timeline Chips** ⬜
+
+**Story:** As a user, I want to see key race moments (overtakes, incidents) as chips above the timeline so that I can jump to exciting parts of the race.
+
+- ⬜ **Task 5.7.1:** Create utility function to detect overtakes from position data changes
+- ⬜ **Task 5.7.2:** Filter to significant overtakes only (top 10 drivers, exclude pit-related position changes)
+- ⬜ **Task 5.7.3:** Create KeyMomentChip component with icon and label (e.g., "VER → NOR")
+- ⬜ **Task 5.7.4:** Position chips above timeline at correct lap/time position
+- ⬜ **Task 5.7.5:** Add click handler to jump timeline to that moment
+- ⬜ **Task 5.7.6:** Add hover tooltip with more details (lap number, position change)
+- ⬜ **Task 5.7.7:** Limit visible chips to prevent overcrowding (max 10-15 moments)
+
+**Acceptance:** Timeline displays clickable chips for major overtakes; clicking jumps to that moment.
+
+**Dependencies:** Story 1.4 (position data required to detect overtakes)
+
+---
+
+### **Story 5.8: Add Weather Widget** ⬜
+
+**Story:** As a user, I want to see track weather conditions so that I understand how weather affects the race.
+
+- ⬜ **Task 5.8.1:** Add `Weather` type to `/types/openf1.ts` (track_temperature, air_temperature, rainfall, humidity, wind_speed)
+- ⬜ **Task 5.8.2:** Add `getWeather(sessionKey: number)` function to `/lib/openf1.ts`
+- ⬜ **Task 5.8.3:** Fetch weather data in race data loader
+- ⬜ **Task 5.8.4:** Create WeatherWidget component with temperature and condition icons
+- ⬜ **Task 5.8.5:** Display widget in race header area (near race title)
+- ⬜ **Task 5.8.6:** Update weather display as user scrubs timeline (find closest weather data point)
+- ⬜ **Task 5.8.7:** Handle missing weather data gracefully (hide widget or show "N/A")
+
+**Acceptance:** Race header displays current track conditions that update with timeline position.
+
+**Dependencies:** None (new API endpoint)
+
+---
+
+### **Story 5.9: Add Team Radio Playback** ⬜
+
+**Story:** As a user, I want to access team radio snippets so that I can hear driver communications during key moments.
+
+- ⬜ **Task 5.9.1:** Investigate if OpenF1 API provides team radio data (check `/team_radio` endpoint)
+- ⬜ **Task 5.9.2:** If available: Add `TeamRadio` type to `/types/openf1.ts`
+- ⬜ **Task 5.9.3:** If available: Add `getTeamRadio(sessionKey: number)` function to `/lib/openf1.ts`
+- ⬜ **Task 5.9.4:** Create TeamRadioPanel component with list of available clips
+- ⬜ **Task 5.9.5:** Create audio player with play/pause controls
+- ⬜ **Task 5.9.6:** Filter clips to show only those near current timeline position
+- ⬜ **Task 5.9.7:** Display driver name and lap number for each clip
+- ⬜ **Task 5.9.8:** Handle case where team radio is not available → show "Radio unavailable for this session"
+
+**Acceptance:** Users can play team radio clips relevant to current race moment; graceful fallback if unavailable.
+
+**Dependencies:** None (new API endpoint, may not be available)
+
+---
+
 ## **EPIC 6: TESTING & DEPLOYMENT** ⬜
 
 ### **Story 6.1: Manual Testing & QA** ⬜
@@ -393,6 +501,8 @@ Epic 1 → Epic 2 (need real data for AI context)
 Epic 1 → Epic 3 (need real data to optimize caching)
 Epic 1 → Epic 5 (need real data for pit stops and flags)
 Epic 4 → Epic 6 (error handling before deployment)
+Story 5.5 → Story 5.6 (car models must exist to be clickable)
+Story 1.4 → Story 5.7 (position data required to detect overtakes)
 ```
 
 ---
@@ -406,6 +516,14 @@ Epic 4 → Epic 6 (error handling before deployment)
 | `/lib/track-utils.ts` | 1.6 | Coordinate normalization and interpolation | ✅ Created |
 | `/lib/ai-context.ts` | 2.2 | AI system prompt builder with race context | ✅ Created |
 | `.env.example` | 0.1 | Environment variable template | ✅ Created |
+| `/public/tracks/*.svg` | 5.4 | Circuit SVG files from Wikimedia Commons | ⬜ Not Started |
+| `/public/models/f1-car.glb` | 5.5 | Low-poly F1 car model (GLB/GLTF) | ⬜ Not Started |
+| `/components/race-viewer/F1Car.tsx` | 5.5 | Reusable F1 car 3D component | ⬜ Not Started |
+| `/components/race-viewer/DriverDetailsPanel.tsx` | 5.6 | Selected driver info panel | ⬜ Not Started |
+| `/components/race-viewer/KeyMomentChip.tsx` | 5.7 | Clickable overtake/incident chip | ⬜ Not Started |
+| `/lib/race-moments.ts` | 5.7 | Utility to detect overtakes from position data | ⬜ Not Started |
+| `/components/race-viewer/WeatherWidget.tsx` | 5.8 | Track conditions display widget | ⬜ Not Started |
+| `/components/race-viewer/TeamRadioPanel.tsx` | 5.9 | Team radio clips list and player | ⬜ Not Started |
 
 ---
 
@@ -418,3 +536,9 @@ Epic 4 → Epic 6 (error handling before deployment)
 | `/api/chat/route.ts` | 2.1-2.3 | Add context, persona, and guardrails | ✅ Updated |
 | Race viewer components | 1.4-1.6 | Use real data for leaderboard and 3D track | ✅ Updated |
 | Chat components | 2.4 | Add loading states and error handling | ✅ Updated |
+| `/components/race-viewer/TrackVisualization.tsx` | 5.4-5.6 | Load circuit SVGs, replace rectangles with F1 car models, add click detection | ⬜ Not Started |
+| `/types/openf1.ts` | 5.8-5.9 | Add Weather and TeamRadio types | ⬜ Not Started |
+| `/lib/openf1.ts` | 5.8-5.9 | Add getWeather() and getTeamRadio() functions | ⬜ Not Started |
+| `/components/race-viewer/Timeline.tsx` | 5.7 | Add KeyMomentChip positioning above timeline | ⬜ Not Started |
+| `/components/race-viewer/Leaderboard.tsx` | 5.6 | Add selected driver highlight styling | ⬜ Not Started |
+| Race header component | 5.8 | Add WeatherWidget display | ⬜ Not Started |
