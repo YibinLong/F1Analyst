@@ -143,15 +143,28 @@ export function F1Car({
  * Motion Trail Component
  *
  * Creates an Akira-style motion trail effect behind the car
+ * Multiple colored streaks that extend behind for speed effect
  */
 function MotionTrail({ teamColor }: { teamColor: string }) {
   const trailColor = new THREE.Color(teamColor)
 
+  // Create Akira-style speed lines using thin elongated shapes
   return (
     <group>
-      {/* Trail segment 1 - closest */}
-      <mesh position={[-0.35, 0.02, 0]}>
-        <boxGeometry args={[0.15, 0.02, 0.1]} />
+      {/* Main team color trail - center */}
+      <mesh position={[-0.5, 0.025, 0]}>
+        <boxGeometry args={[0.6, 0.012, 0.02]} />
+        <meshBasicMaterial
+          color={trailColor}
+          transparent
+          opacity={0.7}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+
+      {/* Extended trail - fading */}
+      <mesh position={[-0.9, 0.025, 0]}>
+        <boxGeometry args={[0.5, 0.008, 0.015]} />
         <meshBasicMaterial
           color={trailColor}
           transparent
@@ -160,24 +173,46 @@ function MotionTrail({ teamColor }: { teamColor: string }) {
         />
       </mesh>
 
-      {/* Trail segment 2 */}
-      <mesh position={[-0.5, 0.02, 0]}>
-        <boxGeometry args={[0.12, 0.015, 0.08]} />
+      {/* Far trail */}
+      <mesh position={[-1.2, 0.025, 0]}>
+        <boxGeometry args={[0.3, 0.005, 0.01]} />
         <meshBasicMaterial
           color={trailColor}
           transparent
-          opacity={0.25}
+          opacity={0.2}
           blending={THREE.AdditiveBlending}
         />
       </mesh>
 
-      {/* Trail segment 3 - furthest */}
-      <mesh position={[-0.62, 0.02, 0]}>
-        <boxGeometry args={[0.08, 0.01, 0.05]} />
+      {/* Upper accent line (slightly offset) */}
+      <mesh position={[-0.45, 0.035, 0.03]}>
+        <boxGeometry args={[0.5, 0.008, 0.012]} />
+        <meshBasicMaterial
+          color={0xffffff}
+          transparent
+          opacity={0.3}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+
+      {/* Lower accent line */}
+      <mesh position={[-0.45, 0.035, -0.03]}>
+        <boxGeometry args={[0.5, 0.008, 0.012]} />
+        <meshBasicMaterial
+          color={0xffffff}
+          transparent
+          opacity={0.3}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+
+      {/* Glow effect behind car */}
+      <mesh position={[-0.35, 0.02, 0]}>
+        <boxGeometry args={[0.2, 0.04, 0.12]} />
         <meshBasicMaterial
           color={trailColor}
           transparent
-          opacity={0.1}
+          opacity={0.2}
           blending={THREE.AdditiveBlending}
         />
       </mesh>
