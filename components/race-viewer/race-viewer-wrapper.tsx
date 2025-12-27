@@ -51,21 +51,34 @@ export function RaceViewerWrapper({ meetingKey, initialRaceInfo }: RaceViewerWra
     async function fetchRaceData() {
       setIsLoading(true)
       setError(null)
-      setLoadingProgress(10)
+      setLoadingProgress(5)
 
       try {
+        // Stage 1: Initiating connection
+        setLoadingProgress(10)
         const response = await fetch(`/api/race/${meetingKey}`)
-        setLoadingProgress(50)
+
+        // Stage 2: Response received
+        setLoadingProgress(30)
 
         if (!response.ok) {
           const errorData = await response.json()
           throw new Error(errorData.error || "Failed to fetch race data")
         }
 
-        setLoadingProgress(80)
+        // Stage 3: Downloading data
+        setLoadingProgress(50)
         const data = await response.json()
-        setLoadingProgress(100)
 
+        // Stage 4: Processing data
+        setLoadingProgress(80)
+
+        // Small delay to show processing stage
+        await new Promise(resolve => setTimeout(resolve, 100))
+        setLoadingProgress(95)
+
+        // Stage 5: Complete
+        setLoadingProgress(100)
         setRaceData(data)
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred while loading race data")
@@ -93,11 +106,17 @@ export function RaceViewerWrapper({ meetingKey, initialRaceInfo }: RaceViewerWra
             />
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            {loadingProgress < 50
-              ? "Connecting to API..."
-              : loadingProgress < 80
-                ? "Downloading race data..."
-                : "Processing data..."}
+            {loadingProgress < 15
+              ? "Connecting to OpenF1 API..."
+              : loadingProgress < 35
+                ? "Fetching session data..."
+                : loadingProgress < 55
+                  ? "Downloading location data..."
+                  : loadingProgress < 85
+                    ? "Processing race data..."
+                    : loadingProgress < 100
+                      ? "Preparing visualization..."
+                      : "Ready!"}
           </p>
         </div>
       </div>
