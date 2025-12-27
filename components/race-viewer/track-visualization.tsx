@@ -80,7 +80,7 @@ function pathToPoints(pathStr: string, scale = 0.1) {
 
 function Track({ trackId }: { trackId: string }) {
   const path = trackPaths[trackId] || trackPaths.default
-  const points = useMemo(() => pathToPoints(path, 0.15), [path])
+  const points = useMemo(() => pathToPoints(path, 0.1), [path])
 
   return (
     <group>
@@ -258,23 +258,34 @@ function CarFallback({
   trackId: string
   driverNumber: number
 }) {
-  const path = trackPaths[trackId] || trackPaths.default
-  const points = useMemo(() => pathToPoints(path, 0.15), [path])
+  // Distribute cars around an ellipse that matches Track3D's rendered extent
+  // Track3D renders SVGs centered at origin, scaled by 0.1, resulting in ~±4 x ±5 extent
+  const { position, rotation } = useMemo(() => {
+    // Distribute cars evenly around an ellipse
+    const numCars = 20
+    const angle = ((index / numCars) * Math.PI * 2) + (Math.PI / 4) // Start at 45 degrees
 
-  // Distribute cars along track based on position
-  const pointIndex = Math.floor((index / 20) * points.length * 0.8) % points.length
-  const carPosition = points[pointIndex] || [0, 0, 0]
+    // Ellipse matching typical track extent
+    const radiusX = 3.5  // Matches ~±4 track extent
+    const radiusZ = 4    // Matches ~±5 track extent
 
-  // Calculate rotation based on track direction at this point
-  const nextPointIndex = (pointIndex + 1) % points.length
-  const nextPoint = points[nextPointIndex] || carPosition
-  const rotation = Math.atan2(
-    nextPoint[0] - carPosition[0],
-    nextPoint[2] - carPosition[2]
-  )
+    const x = Math.cos(angle) * radiusX
+    const z = Math.sin(angle) * radiusZ
+
+    // Rotation to face direction of travel (tangent to ellipse)
+    const nextAngle = angle + 0.1
+    const nextX = Math.cos(nextAngle) * radiusX
+    const nextZ = Math.sin(nextAngle) * radiusZ
+    const carRotation = Math.atan2(nextX - x, nextZ - z)
+
+    return {
+      position: [x, 0.15, z] as [number, number, number],
+      rotation: carRotation
+    }
+  }, [index])
 
   return (
-    <group position={[carPosition[0], 0.15, carPosition[2]]} rotation={[0, rotation, 0]}>
+    <group position={position} rotation={[0, rotation, 0]}>
       <F1Car
         position={[0, 0, 0]}
         teamColor={color}
