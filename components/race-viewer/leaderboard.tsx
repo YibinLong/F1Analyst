@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion"
 import type { Driver } from "@/lib/f1-teams"
+import { PositionDataUnavailable } from "./data-unavailable"
 
 interface Standing {
   position: number
@@ -15,6 +16,9 @@ interface LeaderboardProps {
 }
 
 export function Leaderboard({ standings }: LeaderboardProps) {
+  // Handle empty standings gracefully
+  const hasData = standings && standings.length > 0
+
   return (
     <div className="h-full flex flex-col glass-panel">
       {/* Header */}
@@ -24,6 +28,11 @@ export function Leaderboard({ standings }: LeaderboardProps) {
 
       {/* Standings List */}
       <div className="flex-1 overflow-y-auto">
+        {!hasData ? (
+          <div className="p-4">
+            <PositionDataUnavailable />
+          </div>
+        ) : (
         <div className="p-2 space-y-1">
           {standings.map((standing, index) => (
             <motion.div
@@ -68,6 +77,7 @@ export function Leaderboard({ standings }: LeaderboardProps) {
             </motion.div>
           ))}
         </div>
+        )}
       </div>
 
       {/* Footer stats */}
