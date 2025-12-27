@@ -198,13 +198,16 @@ export function getActiveFlags(
   // Filter race control messages for flags that are relevant to current lap
   const relevantFlags = raceControl
     .filter((rc) => {
-      // Must have a flag and lap number
-      if (!rc.flag || rc.lap_number === null) return false
+      // Must have a lap number
+      if (rc.lap_number === null) return false
       // Must be from current lap or before
       if (rc.lap_number > currentLap) return false
-      // Only include significant flags
-      return ["YELLOW", "RED", "GREEN", "CHEQUERED", "BLACK AND WHITE"].includes(rc.flag) ||
-        (rc.message && (rc.message.includes("SAFETY CAR") || rc.message.includes("VSC")))
+      // Check for safety car/VSC in message (these may not have a flag field)
+      const hasSafetyCarMessage = rc.message &&
+        (rc.message.includes("SAFETY CAR") || rc.message.includes("VSC"))
+      // Include if it has a significant flag OR a safety car message
+      return (rc.flag && ["YELLOW", "RED", "GREEN", "CHEQUERED", "BLACK AND WHITE"].includes(rc.flag)) ||
+        hasSafetyCarMessage
     })
     .sort((a, b) => (b.lap_number || 0) - (a.lap_number || 0))
 
