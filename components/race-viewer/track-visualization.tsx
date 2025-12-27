@@ -1,8 +1,9 @@
 "use client"
 
-import { Canvas } from "@react-three/fiber"
+import { Canvas, useFrame } from "@react-three/fiber"
 import { OrbitControls, PerspectiveCamera, Environment } from "@react-three/drei"
-import { Suspense, useMemo } from "react"
+import { Suspense, useMemo, useRef, useEffect } from "react"
+import * as THREE from "three"
 import type { Driver } from "@/lib/f1-teams"
 import type { OpenF1Location, OpenF1Lap } from "@/types/openf1"
 import { trackPaths } from "@/lib/track-paths"
@@ -12,6 +13,7 @@ import {
   getAnimationTimestamp,
   getRaceTimeRange,
   getInterpolatedPosition,
+  type TrackBounds,
 } from "@/lib/track-utils"
 
 interface Standing {
@@ -25,6 +27,7 @@ interface TrackVisualizationProps {
   trackId: string
   standings: Standing[]
   currentLap: number
+  lapProgress?: number // 0-1 progress within current lap for smooth animation
   locations?: OpenF1Location[]
   laps?: OpenF1Lap[]
   totalLaps?: number
@@ -114,6 +117,9 @@ function Track({ trackId }: { trackId: string }) {
   )
 }
 
+// Reusable Vector3 for interpolation (avoid GC pressure)
+const tempVec = new THREE.Vector3()
+
 function Car({
   position,
   color,
@@ -129,6 +135,79 @@ function Car({
 }) {
   return (
     <group position={[x, y, z]}>
+      {/* Car body */}
+      <mesh>
+        <boxGeometry args={[0.3, 0.1, 0.15]} />
+        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.3} />
+      </mesh>
+
+      {/* Motion trail */}
+      <mesh position={[-0.3, 0, 0]}>
+        <boxGeometry args={[0.4, 0.02, 0.08]} />
+        <meshStandardMaterial color={color} transparent opacity={0.4} />
+      </mesh>
+      <mesh position={[-0.6, 0, 0]}>
+        <boxGeometry args={[0.3, 0.02, 0.06]} />
+        <meshStandardMaterial color={color} transparent opacity={0.2} />
+      </mesh>
+    </group>
+  )
+}
+
+/**
+ * AnimatedCar - Uses useFrame for smooth 60fps position interpolation
+ * Directly mutates position via refs instead of React state for performance
+ */
+function AnimatedCar({
+  driverNumber,
+  color,
+  driverLocations,
+  trackBounds,
+  raceTimeRange,
+  currentLap,
+  lapProgress,
+  totalLaps,
+}: {
+  driverNumber: number
+  color: string
+  driverLocations: OpenF1Location[]
+  trackBounds: TrackBounds
+  raceTimeRange: { start: number; end: number }
+  currentLap: number
+  lapProgress: number
+  totalLaps: number
+}) {
+  const groupRef = useRef<THREE.Group>(null)
+  const targetPosition = useRef({ x: 0, y: 0.15, z: 0 })
+
+  // Calculate target position based on current lap and progress
+  useEffect(() => {
+    const timestamp = getAnimationTimestamp(currentLap, lapProgress, raceTimeRange, totalLaps)
+    const pos = getInterpolatedPosition(driverLocations, timestamp, trackBounds)
+    if (pos) {
+      targetPosition.current = pos
+    }
+  }, [currentLap, lapProgress, driverLocations, trackBounds, raceTimeRange, totalLaps])
+
+  // Smooth interpolation every frame using useFrame
+  useFrame(() => {
+    if (!groupRef.current) return
+
+    // Smoothly lerp to target position (higher factor = faster response)
+    const lerpFactor = 0.15
+
+    groupRef.current.position.lerp(
+      tempVec.set(
+        targetPosition.current.x,
+        targetPosition.current.y,
+        targetPosition.current.z
+      ),
+      lerpFactor
+    )
+  })
+
+  return (
+    <group ref={groupRef} position={[targetPosition.current.x, targetPosition.current.y, targetPosition.current.z]}>
       {/* Car body */}
       <mesh>
         <boxGeometry args={[0.3, 0.1, 0.15]} />
@@ -180,9 +259,27 @@ interface SceneProps {
   standings: Standing[]
   carPositions: Map<number, { x: number; y: number; z: number }>
   useRealPositions: boolean
+  // Props for animated cars
+  locationsByDriver?: Map<number, OpenF1Location[]>
+  trackBounds?: TrackBounds | null
+  raceTimeRange?: { start: number; end: number }
+  currentLap?: number
+  lapProgress?: number
+  totalLaps?: number
 }
 
-function Scene({ trackId, standings, carPositions, useRealPositions }: SceneProps) {
+function Scene({
+  trackId,
+  standings,
+  carPositions,
+  useRealPositions,
+  locationsByDriver,
+  trackBounds,
+  raceTimeRange,
+  currentLap = 1,
+  lapProgress = 0,
+  totalLaps = 57,
+}: SceneProps) {
   return (
     <>
       <PerspectiveCamera makeDefault position={[0, 12, 15]} fov={50} />
@@ -203,8 +300,27 @@ function Scene({ trackId, standings, carPositions, useRealPositions }: SceneProp
       <Track trackId={trackId} />
 
       {standings.slice(0, 20).map((standing, index) => {
-        const realPos = carPositions.get(standing.driver.number)
+        const driverLocations = locationsByDriver?.get(standing.driver.number)
 
+        // Use AnimatedCar for smooth 60fps animation when we have location data
+        if (useRealPositions && driverLocations && driverLocations.length > 0 && trackBounds && raceTimeRange) {
+          return (
+            <AnimatedCar
+              key={standing.driver.number}
+              driverNumber={standing.driver.number}
+              color={standing.driver.teamColor}
+              driverLocations={driverLocations}
+              trackBounds={trackBounds}
+              raceTimeRange={raceTimeRange}
+              currentLap={currentLap}
+              lapProgress={lapProgress}
+              totalLaps={totalLaps}
+            />
+          )
+        }
+
+        // Fallback to static position if we have pre-computed positions
+        const realPos = carPositions.get(standing.driver.number)
         if (useRealPositions && realPos) {
           return (
             <Car
@@ -238,16 +354,17 @@ export function TrackVisualization({
   trackId,
   standings,
   currentLap,
+  lapProgress = 0,
   locations = [],
   laps = [],
   totalLaps = 57,
 }: TrackVisualizationProps) {
-  // Calculate track bounds and group locations
+  // Calculate track bounds and group locations (memoized for performance)
   const { trackBounds, locationsByDriver, raceTimeRange } = useMemo(() => {
     if (locations.length === 0) {
       return {
         trackBounds: null,
-        locationsByDriver: new Map(),
+        locationsByDriver: new Map<number, OpenF1Location[]>(),
         raceTimeRange: { start: Date.now(), end: Date.now() },
       }
     }
@@ -259,7 +376,20 @@ export function TrackVisualization({
     }
   }, [locations])
 
-  // Calculate car positions for current lap
+  // Development mode: log memory usage for large dataset analysis (Story 3.3)
+  useEffect(() => {
+    if (process.env.NODE_ENV === "development" && locations.length > 0) {
+      const locationCount = locations.length
+      const estimatedBytes = locationCount * 40 // ~40 bytes per location point
+      console.log(
+        `[TrackVisualization] Location data: ${locationCount.toLocaleString()} points, ` +
+        `~${(estimatedBytes / 1024).toFixed(1)} KB, ` +
+        `${locationsByDriver.size} drivers`
+      )
+    }
+  }, [locations, locationsByDriver.size])
+
+  // Calculate static car positions for fallback (when AnimatedCar isn't used)
   const carPositions = useMemo(() => {
     const positions = new Map<number, { x: number; y: number; z: number }>()
 
@@ -267,8 +397,7 @@ export function TrackVisualization({
       return positions
     }
 
-    // Calculate timestamp for current lap (assuming linear progress through lap)
-    const lapProgress = 0.5 // Middle of the lap
+    // Calculate timestamp for current lap with progress
     const timestamp = getAnimationTimestamp(currentLap, lapProgress, raceTimeRange, totalLaps)
 
     for (const [driverNum, driverLocations] of locationsByDriver) {
@@ -279,9 +408,9 @@ export function TrackVisualization({
     }
 
     return positions
-  }, [currentLap, trackBounds, locationsByDriver, raceTimeRange, totalLaps])
+  }, [currentLap, lapProgress, trackBounds, locationsByDriver, raceTimeRange, totalLaps])
 
-  const useRealPositions = locations.length > 0 && carPositions.size > 0
+  const useRealPositions = locations.length > 0 && locationsByDriver.size > 0
 
   return (
     <div className="w-full h-full relative">
@@ -312,6 +441,12 @@ export function TrackVisualization({
             standings={standings}
             carPositions={carPositions}
             useRealPositions={useRealPositions}
+            locationsByDriver={locationsByDriver}
+            trackBounds={trackBounds}
+            raceTimeRange={raceTimeRange}
+            currentLap={currentLap}
+            lapProgress={lapProgress}
+            totalLaps={totalLaps}
           />
         </Suspense>
       </Canvas>
