@@ -420,9 +420,15 @@ export function mapTeamNameToKey(teamName: string): string {
 
 /**
  * Map circuit_short_name to circuitKey for track visualization
+ * Handles various naming conventions from OpenF1 API
  */
 export function mapCircuitToKey(circuitShortName: string): string {
+  // Normalize the input to handle variations
+  const normalized = circuitShortName.trim()
+
   const circuitMapping: Record<string, string> = {
+    // Standard names (circuit_short_name from OpenF1)
+    Sakhir: "bahrain",
     Bahrain: "bahrain",
     Jeddah: "jeddah",
     Melbourne: "albert_park",
@@ -432,6 +438,7 @@ export function mapCircuitToKey(circuitShortName: string): string {
     "Imola": "imola",
     Monaco: "monaco",
     Montreal: "montreal",
+    Montréal: "montreal",
     Barcelona: "barcelona",
     Spielberg: "red_bull_ring",
     Silverstone: "silverstone",
@@ -441,13 +448,73 @@ export function mapCircuitToKey(circuitShortName: string): string {
     Monza: "monza",
     Baku: "baku",
     Singapore: "singapore",
+    "Marina Bay": "singapore",
     Austin: "cota",
     "Mexico City": "mexico",
     "São Paulo": "interlagos",
     "Las Vegas": "las_vegas",
-    Lusail: "qatar",
+    Lusail: "lusail",
+    "Yas Island": "yas_marina",
     "Yas Marina": "yas_marina",
+    // Extended circuit name variations (OpenF1 API may return these)
+    "Yas Marina Circuit": "yas_marina",
+    "Bahrain International Circuit": "bahrain",
+    "Jeddah Corniche Circuit": "jeddah",
+    "Albert Park Circuit": "albert_park",
+    "Albert Park": "albert_park",
+    "Suzuka Circuit": "suzuka",
+    "Suzuka International Racing Course": "suzuka",
+    "Shanghai International Circuit": "shanghai",
+    "Miami International Autodrome": "miami",
+    "Autodromo Enzo e Dino Ferrari": "imola",
+    "Imola Circuit": "imola",
+    "Circuit de Monaco": "monaco",
+    "Monaco Circuit": "monaco",
+    "Circuit Gilles Villeneuve": "montreal",
+    "Montreal Circuit": "montreal",
+    "Circuit de Barcelona-Catalunya": "barcelona",
+    "Barcelona-Catalunya": "barcelona",
+    "Red Bull Ring": "red_bull_ring",
+    "Silverstone Circuit": "silverstone",
+    "Hungaroring": "hungaroring",
+    "Circuit de Spa-Francorchamps": "spa",
+    "Spa": "spa",
+    "Circuit Zandvoort": "zandvoort",
+    "Autodromo Nazionale Monza": "monza",
+    "Monza Circuit": "monza",
+    "Baku City Circuit": "baku",
+    "Marina Bay Street Circuit": "singapore",
+    "Marina Bay": "singapore",
+    "Circuit of the Americas": "cota",
+    "COTA": "cota",
+    "Autodromo Hermanos Rodriguez": "mexico",
+    "Mexico City Circuit": "mexico",
+    "Autodromo Jose Carlos Pace": "interlagos",
+    "Interlagos": "interlagos",
+    "Las Vegas Strip Circuit": "las_vegas",
+    "Lusail International Circuit": "lusail",
+    "Qatar": "lusail",
   }
 
-  return circuitMapping[circuitShortName] || circuitShortName.toLowerCase().replace(/\s+/g, "_")
+  // Try direct match first
+  if (circuitMapping[normalized]) {
+    return circuitMapping[normalized]
+  }
+
+  // Try case-insensitive match
+  const lowerNormalized = normalized.toLowerCase()
+  for (const [key, value] of Object.entries(circuitMapping)) {
+    if (key.toLowerCase() === lowerNormalized) {
+      return value
+    }
+  }
+
+  // Fallback: convert to snake_case, removing common suffixes
+  let fallback = normalized
+    .replace(/\s*(Circuit|International|Racing Course|Street Circuit|Autodrome|Autodromo)\s*/gi, '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+
+  return fallback || normalized.toLowerCase().replace(/\s+/g, "_")
 }
