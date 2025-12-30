@@ -57,7 +57,7 @@ export const OpenF1DriverSchema = z.object({
   first_name: z.string(),
   last_name: z.string(),
   headshot_url: z.string().nullable(),
-  country_code: z.string(),
+  country_code: z.string().nullable(),
   session_key: z.number().int().positive(),
   meeting_key: z.number().int().positive(),
 })
@@ -94,8 +94,8 @@ export const OpenF1PositionSchema = z.object({
  */
 export const OpenF1IntervalSchema = z.object({
   driver_number: z.number().int().positive(),
-  interval: z.number().nullable(),
-  gap_to_leader: z.number().nullable(),
+  interval: z.union([z.number(), z.string()]).nullable(),
+  gap_to_leader: z.union([z.number(), z.string()]).nullable(),
   date: z.string(),
   session_key: z.number().int().positive(),
   meeting_key: z.number().int().positive(),
@@ -116,7 +116,7 @@ export const OpenF1LapSchema = z.object({
   i2_speed: z.number().nullable(),
   st_speed: z.number().nullable(),
   is_pit_out_lap: z.boolean(),
-  date_start: z.string(),
+  date_start: z.string().nullable(),
   session_key: z.number().int().positive(),
   meeting_key: z.number().int().positive(),
 })
