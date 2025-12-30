@@ -524,6 +524,31 @@ export function TrackVisualization({
   laps = [],
   totalLaps = 57,
 }: TrackVisualizationProps) {
+  // DEBUG: Log what TrackVisualization receives
+  useEffect(() => {
+    console.log(`\n${'='.repeat(60)}`)
+    console.log(`[TrackVisualization DEBUG] 🎬 Component mounted/updated`)
+    console.log(`${'='.repeat(60)}`)
+    console.log(`[TrackVisualization DEBUG] 📊 Props received:`)
+    console.log(`  - trackId: ${trackId}`)
+    console.log(`  - standings: ${standings.length} drivers`)
+    console.log(`  - currentLap: ${currentLap}`)
+    console.log(`  - lapProgress: ${lapProgress}`)
+    console.log(`  - locations: ${locations.length} records  ← 🔍 KEY DATA`)
+    console.log(`  - laps: ${laps.length} records`)
+    console.log(`  - totalLaps: ${totalLaps}`)
+
+    if (locations.length === 0) {
+      console.warn(`[TrackVisualization DEBUG] ⚠️ LOCATIONS ARRAY IS EMPTY!`)
+      console.warn(`[TrackVisualization DEBUG] ⚠️ This triggers the "Location Data Unavailable" message`)
+    } else {
+      console.log(`[TrackVisualization DEBUG] ✅ Has location data`)
+      const uniqueDrivers = [...new Set(locations.map((l: OpenF1Location) => l.driver_number))]
+      console.log(`[TrackVisualization DEBUG] 👤 Unique drivers in locations: ${uniqueDrivers.join(', ')}`)
+      console.log(`[TrackVisualization DEBUG] 📍 Sample location:`, locations[0])
+    }
+  }, [trackId, standings.length, currentLap, lapProgress, locations.length, laps.length, totalLaps])
+
   // State for track path points (fetched from SVG)
   const [trackPoints, setTrackPoints] = useState<Track3DPoint[]>([])
   const [startMeta, setStartMeta] = useState<StartLineMeta | null>(null)
@@ -553,6 +578,7 @@ export function TrackVisualization({
   // Calculate track bounds and group locations (memoized for performance)
   const { trackBounds, locationsByDriver, raceTimeRange } = useMemo(() => {
     if (locations.length === 0) {
+      console.log(`[TrackVisualization DEBUG] 📍 useMemo: locations.length === 0, returning empty state`)
       return {
         trackBounds: null,
         locationsByDriver: new Map<number, OpenF1Location[]>(),
@@ -560,10 +586,19 @@ export function TrackVisualization({
       }
     }
 
+    const bounds = calculateTrackBounds(locations)
+    const byDriver = groupLocationsByDriver(locations)
+    const timeRange = getRaceTimeRange(locations)
+
+    console.log(`[TrackVisualization DEBUG] 📍 useMemo calculated:`)
+    console.log(`  - trackBounds:`, bounds)
+    console.log(`  - locationsByDriver: ${byDriver.size} drivers`)
+    console.log(`  - raceTimeRange:`, timeRange)
+
     return {
-      trackBounds: calculateTrackBounds(locations),
-      locationsByDriver: groupLocationsByDriver(locations),
-      raceTimeRange: getRaceTimeRange(locations),
+      trackBounds: bounds,
+      locationsByDriver: byDriver,
+      raceTimeRange: timeRange,
     }
   }, [locations])
 

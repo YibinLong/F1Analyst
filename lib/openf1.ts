@@ -53,6 +53,10 @@ async function fetchOpenF1<T>(
 
   const url = `${BASE_URL}${endpoint}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`
 
+  // DEBUG: Log API request
+  console.log(`[OpenF1 DEBUG] 🌐 Fetching: ${url}`)
+  console.log(`[OpenF1 DEBUG] 📋 Params:`, JSON.stringify(params))
+
   try {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT)
@@ -66,13 +70,14 @@ async function fetchOpenF1<T>(
 
     clearTimeout(timeoutId)
 
+    // DEBUG: Log response status
+    console.log(`[OpenF1 DEBUG] 📨 Response status: ${response.status} ${response.statusText} for ${endpoint}`)
+
     if (!response.ok) {
       // Handle rate limiting with exponential backoff
       if (response.status === 429 && retryCount < MAX_RETRIES) {
         const delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount)
-        if (process.env.NODE_ENV === "development") {
-          console.warn(`[OpenF1] Rate limited, retrying in ${delay}ms...`)
-        }
+        console.warn(`[OpenF1 DEBUG] ⚠️ Rate limited (429), retrying in ${delay}ms...`)
         await sleep(delay)
         return fetchOpenF1<T>(endpoint, params, retryCount + 1)
       }
@@ -80,29 +85,38 @@ async function fetchOpenF1<T>(
       // Handle 422 Unprocessable Entity - data not available (e.g., future races)
       // Return null instead of throwing to indicate missing data gracefully
       if (response.status === 422) {
-        if (process.env.NODE_ENV === "development") {
-          console.warn(`[OpenF1] Data not available for ${endpoint} (HTTP 422)`)
-        }
+        console.warn(`[OpenF1 DEBUG] ⚠️ Data not available for ${endpoint} (HTTP 422) - possibly future race or no data`)
         return null
       }
 
+      console.error(`[OpenF1 DEBUG] ❌ HTTP Error: ${response.status}: ${response.statusText}`)
       throw new Error(`HTTP ${response.status}: ${response.statusText}`)
     }
 
     const data = await response.json()
+
+    // DEBUG: Log response data summary
+    const dataArray = Array.isArray(data) ? data : []
+    console.log(`[OpenF1 DEBUG] ✅ ${endpoint} returned ${dataArray.length} items`)
+    if (dataArray.length === 0) {
+      console.warn(`[OpenF1 DEBUG] ⚠️ EMPTY ARRAY returned for ${endpoint} with params:`, params)
+    } else if (dataArray.length > 0) {
+      console.log(`[OpenF1 DEBUG] 📊 First item sample:`, JSON.stringify(dataArray[0]).slice(0, 200))
+    }
+
     return data as T[]
   } catch (error) {
-    if (process.env.NODE_ENV === "development") {
-      console.error(`[OpenF1] Error fetching ${url}:`, error)
-    }
+    console.error(`[OpenF1 DEBUG] ❌ Error fetching ${url}:`, error)
 
     // Retry on network errors
     if (retryCount < MAX_RETRIES && error instanceof Error && error.name !== "AbortError") {
       const delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount)
+      console.log(`[OpenF1 DEBUG] 🔄 Retrying in ${delay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})...`)
       await sleep(delay)
       return fetchOpenF1<T>(endpoint, params, retryCount + 1)
     }
 
+    console.error(`[OpenF1 DEBUG] ❌ FAILED after ${retryCount} retries for ${endpoint}`)
     return null
   }
 }
@@ -126,12 +140,36 @@ export async function getSession(
   meetingKey: number,
   sessionName: string
 ): Promise<OpenF1Session | null> {
+  console.log(`[OpenF1 DEBUG] 🔍 getSession() called: meeting_key=${meetingKey}, session_name="${sessionName}"`)
+
   const data = await fetchOpenF1<OpenF1Session>("/sessions", {
     meeting_key: meetingKey,
     session_name: sessionName,
   })
-  if (!data) return null
+
+  if (!data) {
+    console.warn(`[OpenF1 DEBUG] ⚠️ getSession() returned null for meeting_key=${meetingKey}, session_name="${sessionName}"`)
+    return null
+  }
+
   const validated = validateArray(data, OpenF1SessionSchema, "/sessions") as OpenF1Session[]
+
+  if (validated.length === 0) {
+    console.warn(`[OpenF1 DEBUG] ⚠️ No sessions found for meeting_key=${meetingKey}, session_name="${sessionName}"`)
+    console.warn(`[OpenF1 DEBUG] 💡 Raw data had ${data.length} items but none validated`)
+    if (data.length > 0) {
+      console.log(`[OpenF1 DEBUG] 📊 First raw session:`, JSON.stringify(data[0]))
+    }
+    return null
+  }
+
+  console.log(`[OpenF1 DEBUG] ✅ getSession() found session:`, {
+    session_key: validated[0].session_key,
+    session_name: validated[0].session_name,
+    date_start: validated[0].date_start,
+    date_end: validated[0].date_end,
+  })
+
   return validated[0] || null
 }
 
@@ -164,13 +202,27 @@ export async function getLocations(
   sessionKey: number,
   driverNumber?: number
 ): Promise<OpenF1Location[] | null> {
+  console.log(`[OpenF1 DEBUG] 📍 getLocations() called with session_key: ${sessionKey}, driverNumber: ${driverNumber ?? 'ALL'}`)
+
   const params: Record<string, string | number> = { session_key: sessionKey }
   if (driverNumber !== undefined) {
     params.driver_number = driverNumber
   }
   const data = await fetchOpenF1<OpenF1Location>("/location", params)
-  if (!data) return null
-  return validateArray(data, OpenF1LocationSchema, "/location") as OpenF1Location[]
+
+  if (!data) {
+    console.warn(`[OpenF1 DEBUG] ⚠️ getLocations() returned null for session_key: ${sessionKey}`)
+    return null
+  }
+
+  const validated = validateArray(data, OpenF1LocationSchema, "/location") as OpenF1Location[]
+  console.log(`[OpenF1 DEBUG] 📍 getLocations() validated ${validated.length}/${data.length} location records`)
+
+  if (validated.length === 0 && data.length > 0) {
+    console.error(`[OpenF1 DEBUG] ❌ ALL location records failed validation! Sample raw data:`, JSON.stringify(data[0]))
+  }
+
+  return validated
 }
 
 /**
@@ -440,6 +492,7 @@ export function mapCircuitToKey(circuitShortName: string): string {
     Montreal: "montreal",
     Montréal: "montreal",
     Barcelona: "barcelona",
+    Catalunya: "barcelona",
     Spielberg: "red_bull_ring",
     Silverstone: "silverstone",
     Budapest: "hungaroring",

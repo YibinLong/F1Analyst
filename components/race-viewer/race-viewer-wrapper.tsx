@@ -71,6 +71,30 @@ export function RaceViewerWrapper({ meetingKey, initialRaceInfo }: RaceViewerWra
         setLoadingProgress(50)
         const data = await response.json()
 
+        // DEBUG: Log the raw API response
+        console.log(`\n${'='.repeat(60)}`)
+        console.log(`[RaceViewerWrapper DEBUG] 📦 Raw API response received`)
+        console.log(`${'='.repeat(60)}`)
+        console.log(`[RaceViewerWrapper DEBUG] 📊 Response data summary:`)
+        console.log(`  - race: ${data.race?.meetingName || 'missing'}`)
+        console.log(`  - drivers: ${data.drivers?.length ?? 'null'} drivers`)
+        console.log(`  - totalLaps: ${data.totalLaps ?? 'null'}`)
+        console.log(`  - sessionKey: ${data.sessionKey ?? 'null'}`)
+        console.log(`  - positions: ${data.positions?.length ?? 'null'} records`)
+        console.log(`  - intervals: ${data.intervals?.length ?? 'null'} records`)
+        console.log(`  - laps: ${data.laps?.length ?? 'null'} records`)
+        console.log(`  - locations: ${data.locations?.length ?? 'null'} records  ← 🔍 KEY DATA`)
+        console.log(`  - raceControl: ${data.raceControl?.length ?? 'null'} records`)
+        console.log(`  - pitStops: ${data.pitStops?.length ?? 'null'} records`)
+
+        if (!data.locations || data.locations.length === 0) {
+          console.warn(`[RaceViewerWrapper DEBUG] ⚠️ NO LOCATIONS in API response!`)
+          console.warn(`[RaceViewerWrapper DEBUG] ⚠️ This will cause "Location Data Unavailable" to show`)
+        } else {
+          console.log(`[RaceViewerWrapper DEBUG] ✅ Locations received: ${data.locations.length} records`)
+          console.log(`[RaceViewerWrapper DEBUG] 📍 First location sample:`, data.locations[0])
+        }
+
         // Stage 4: Processing data
         setLoadingProgress(80)
 
