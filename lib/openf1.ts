@@ -194,35 +194,99 @@ export async function getDrivers(sessionKey: number): Promise<OpenF1Driver[] | n
 }
 
 /**
- * Get car locations for a session
- * @param sessionKey - The session key
- * @param driverNumber - Optional driver number to filter by
+ * Get car locations for a session in a single time window
+ * @internal Use getLocations instead which handles chunking
  */
-export async function getLocations(
+async function fetchLocationChunk(
   sessionKey: number,
+  dateStart: string,
+  dateEnd: string,
   driverNumber?: number
-): Promise<OpenF1Location[] | null> {
-  console.log(`[OpenF1 DEBUG] 📍 getLocations() called with session_key: ${sessionKey}, driverNumber: ${driverNumber ?? 'ALL'}`)
-
+): Promise<OpenF1Location[]> {
   const params: Record<string, string | number> = { session_key: sessionKey }
   if (driverNumber !== undefined) {
     params.driver_number = driverNumber
   }
-  const data = await fetchOpenF1<OpenF1Location>("/location", params)
+  params['date>='] = dateStart
+  params['date<='] = dateEnd
 
-  if (!data) {
-    console.warn(`[OpenF1 DEBUG] ⚠️ getLocations() returned null for session_key: ${sessionKey}`)
+  const data = await fetchOpenF1<OpenF1Location>("/location", params)
+  if (!data) return []
+
+  return validateArray(data, OpenF1LocationSchema, "/location") as OpenF1Location[]
+}
+
+/**
+ * Get car locations for a session
+ * @param sessionKey - The session key
+ * @param options - Optional filters: driverNumber, dateStart, dateEnd
+ *
+ * IMPORTANT: The location endpoint returns data at ~3.7 Hz, which is MASSIVE.
+ * This function fetches in 5-minute chunks to avoid "too much data" errors.
+ */
+export async function getLocations(
+  sessionKey: number,
+  options?: {
+    driverNumber?: number
+    dateStart?: string
+    dateEnd?: string
+  }
+): Promise<OpenF1Location[] | null> {
+  const { driverNumber, dateStart, dateEnd } = options || {}
+  console.log(`[OpenF1 DEBUG] 📍 getLocations() called with session_key: ${sessionKey}, driverNumber: ${driverNumber ?? 'ALL'}, dateStart: ${dateStart ?? 'none'}, dateEnd: ${dateEnd ?? 'none'}`)
+
+  // Without date range, we can't fetch location data (too much data error)
+  if (!dateStart || !dateEnd) {
+    console.warn(`[OpenF1 DEBUG] ⚠️ getLocations() requires dateStart and dateEnd to avoid API limits`)
     return null
   }
 
-  const validated = validateArray(data, OpenF1LocationSchema, "/location") as OpenF1Location[]
-  console.log(`[OpenF1 DEBUG] 📍 getLocations() validated ${validated.length}/${data.length} location records`)
+  const start = new Date(dateStart)
+  const end = new Date(dateEnd)
+  const CHUNK_SIZE_MS = 5 * 60 * 1000 // 5 minutes in milliseconds
 
-  if (validated.length === 0 && data.length > 0) {
-    console.error(`[OpenF1 DEBUG] ❌ ALL location records failed validation! Sample raw data:`, JSON.stringify(data[0]))
+  // Calculate number of chunks needed
+  const totalDuration = end.getTime() - start.getTime()
+  const numChunks = Math.ceil(totalDuration / CHUNK_SIZE_MS)
+  console.log(`[OpenF1 DEBUG] 📍 Fetching location data in ${numChunks} chunks (5-minute windows)`)
+
+  // Fetch all chunks in parallel (but limit concurrency to avoid rate limits)
+  const allLocations: OpenF1Location[] = []
+  const CONCURRENCY_LIMIT = 4 // Fetch 4 chunks at a time
+
+  for (let i = 0; i < numChunks; i += CONCURRENCY_LIMIT) {
+    const chunkPromises: Promise<OpenF1Location[]>[] = []
+
+    for (let j = i; j < Math.min(i + CONCURRENCY_LIMIT, numChunks); j++) {
+      const chunkStart = new Date(start.getTime() + j * CHUNK_SIZE_MS)
+      const chunkEnd = new Date(Math.min(chunkStart.getTime() + CHUNK_SIZE_MS, end.getTime()))
+
+      chunkPromises.push(
+        fetchLocationChunk(
+          sessionKey,
+          chunkStart.toISOString(),
+          chunkEnd.toISOString(),
+          driverNumber
+        )
+      )
+    }
+
+    const results = await Promise.all(chunkPromises)
+    for (const chunk of results) {
+      allLocations.push(...chunk)
+    }
+
+    console.log(`[OpenF1 DEBUG] 📍 Fetched chunks ${i + 1}-${Math.min(i + CONCURRENCY_LIMIT, numChunks)}/${numChunks}, total locations: ${allLocations.length}`)
   }
 
-  return validated
+  console.log(`[OpenF1 DEBUG] 📍 getLocations() completed: ${allLocations.length} total location records`)
+
+  if (allLocations.length === 0) {
+    console.warn(`[OpenF1 DEBUG] ⚠️ No location data found for session_key: ${sessionKey}`)
+    return null
+  }
+
+  return allLocations
 }
 
 /**
@@ -301,9 +365,10 @@ export function groupPositionsByLap(
 ): Record<number, Record<number, number>> {
   const result: Record<number, Record<number, number>> = {}
 
-  // Create a map of timestamps to lap numbers
+  // Create a map of timestamps to lap numbers (skip laps with null date_start)
   const lapTimestamps = laps.reduce(
     (acc, lap) => {
+      if (!lap.date_start) return acc
       const timestamp = new Date(lap.date_start).getTime()
       acc[lap.driver_number] = acc[lap.driver_number] || []
       acc[lap.driver_number].push({ lap: lap.lap_number, timestamp })
@@ -374,15 +439,16 @@ export function groupPositionsByLap(
 export function groupIntervalsByLap(
   intervals: OpenF1Interval[],
   laps: OpenF1Lap[]
-): Record<number, Record<number, { interval: number | null; gapToLeader: number | null }>> {
+): Record<number, Record<number, { interval: number | string | null; gapToLeader: number | string | null }>> {
   const result: Record<
     number,
-    Record<number, { interval: number | null; gapToLeader: number | null }>
+    Record<number, { interval: number | string | null; gapToLeader: number | string | null }>
   > = {}
 
-  // Create a map of timestamps to lap numbers
+  // Create a map of timestamps to lap numbers (skip laps with null date_start)
   const lapTimestamps = laps.reduce(
     (acc, lap) => {
+      if (!lap.date_start) return acc
       const timestamp = new Date(lap.date_start).getTime()
       acc[lap.driver_number] = acc[lap.driver_number] || []
       acc[lap.driver_number].push({ lap: lap.lap_number, timestamp })

@@ -74,6 +74,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 
   // Fetch all data in parallel
   console.log(`[API Route DEBUG] 📡 Fetching all race data for session_key: ${session.session_key}`)
+  console.log(`[API Route DEBUG] 📅 Session time range: ${session.date_start} to ${session.date_end}`)
 
   const [drivers, positions, intervals, laps, locations, raceControl, pitStops, meetings] =
     await Promise.all([
@@ -81,7 +82,11 @@ export async function GET(request: Request, { params }: RouteParams) {
       getPositions(session.session_key),
       getIntervals(session.session_key),
       getLaps(session.session_key),
-      getLocations(session.session_key),
+      // Pass date range to avoid "too much data" error from OpenF1
+      getLocations(session.session_key, {
+        dateStart: session.date_start,
+        dateEnd: session.date_end,
+      }),
       getRaceControl(session.session_key),
       getPitStops(session.session_key),
       getMeetings(2025),
