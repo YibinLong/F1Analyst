@@ -148,18 +148,18 @@ export function getPointAtDistance(
   points: Track3DPoint[],
   distance: number,
   closed: boolean = true
-): { point: Track3DPoint; rotation: number } {
+): { position: Track3DPoint; rotation: number } {
   if (points.length === 0) {
-    return { point: { x: 0, y: 0.45, z: 0 }, rotation: 0 }
+    return { position: { x: 0, y: 0.45, z: 0 }, rotation: 0 }
   }
 
   if (points.length === 1) {
-    return { point: points[0], rotation: 0 }
+    return { position: points[0], rotation: 0 }
   }
 
   const totalLength = calculatePathLength(points, closed)
   if (totalLength === 0) {
-    return { point: points[0], rotation: 0 }
+    return { position: points[0], rotation: 0 }
   }
 
   const target = closed
@@ -180,7 +180,7 @@ export function getPointAtDistance(
       const remaining = target - traveled
       const t = segmentLength > 0 ? remaining / segmentLength : 0
 
-      const point: Track3DPoint = {
+      const position: Track3DPoint = {
         x: points[i].x + dx * t,
         y: points[i].y,
         z: points[i].z + dz * t,
@@ -190,7 +190,7 @@ export function getPointAtDistance(
       // F1Car model has nose pointing along +X, so we subtract PI/2
       const rotation = Math.atan2(dx, dz) - Math.PI / 2
 
-      return { point, rotation }
+      return { position, rotation }
     }
 
     traveled += segmentLength
@@ -203,7 +203,7 @@ export function getPointAtDistance(
   const dz = points[lastIdx].z - points[prevIdx].z
 
   return {
-    point: points[lastIdx],
+    position: points[lastIdx],
     rotation: Math.atan2(dx, dz) - Math.PI / 2
   }
 }
@@ -226,8 +226,8 @@ export function distributeCarPositions(
   for (let i = 0; i < numCars; i++) {
     // Distribute cars with offset, wrap around
     const distance = ((i * spacing) + (startOffset * totalLength)) % totalLength
-    const { point, rotation } = getPointAtDistance(points, distance)
-    result.push({ position: point, rotation })
+    const { position, rotation } = getPointAtDistance(points, distance)
+    result.push({ position, rotation })
   }
 
   return result
@@ -430,10 +430,10 @@ export function getStartLineMeta(points: Track3DPoint[]): StartLineMeta {
   // Place start line a bit down the longest straight to avoid corners
   const startDistance = cumulative[longestIdx] + longestLength * 0.35
   const startProgress = totalLength > 0 ? (startDistance % totalLength) / totalLength : 0
-  const { point, rotation } = getPointAtDistance(points, startDistance)
+  const { position, rotation } = getPointAtDistance(points, startDistance)
 
   return {
-    startPoint: { ...point, y: points[0].y },
+    startPoint: { ...position, y: points[0].y },
     direction: { x: dirX, z: dirZ },
     rotation,
     startOffset: startProgress,
