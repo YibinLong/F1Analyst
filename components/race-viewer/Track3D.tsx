@@ -10,12 +10,14 @@ interface Track3DProps {
 }
 
 // Track width in 3D units (this makes the road wide enough for cars)
-const TRACK_WIDTH = 0.8
-const TRACK_EDGE_WIDTH = 0.04
+// Width allows approximately 3 cars abreast at any point
+const TRACK_WIDTH = 2.4
+const TRACK_EDGE_WIDTH = 0.12
 
 /**
  * Calculate offset points to create track edges
  * Creates parallel lines at specified distance from centerline
+ * Uses miter limiting to prevent artifacts at sharp corners
  */
 function offsetPath(
   points: THREE.Vector3[],
@@ -26,41 +28,75 @@ function offsetPath(
 
   const offsetPoints: THREE.Vector3[] = []
   const sign = side === "left" ? -1 : 1
+  const maxMiterLength = offset * 2 // Limit miter to prevent spikes at sharp corners
 
   for (let i = 0; i < points.length; i++) {
-    // Calculate direction at this point
-    let dx = 0
-    let dz = 0
+    // Calculate incoming and outgoing directions
+    let dx1 = 0, dz1 = 0, dx2 = 0, dz2 = 0
 
     if (i === 0) {
       // First point: use direction to next point
-      dx = points[1].x - points[0].x
-      dz = points[1].z - points[0].z
+      dx1 = dx2 = points[1].x - points[0].x
+      dz1 = dz2 = points[1].z - points[0].z
     } else if (i === points.length - 1) {
       // Last point: use direction from previous point
-      dx = points[i].x - points[i - 1].x
-      dz = points[i].z - points[i - 1].z
+      dx1 = dx2 = points[i].x - points[i - 1].x
+      dz1 = dz2 = points[i].z - points[i - 1].z
     } else {
-      // Middle points: average of incoming and outgoing directions
-      const dx1 = points[i].x - points[i - 1].x
-      const dz1 = points[i].z - points[i - 1].z
-      const dx2 = points[i + 1].x - points[i].x
-      const dz2 = points[i + 1].z - points[i].z
-      dx = (dx1 + dx2) / 2
-      dz = (dz1 + dz2) / 2
+      // Middle points: separate incoming and outgoing directions
+      dx1 = points[i].x - points[i - 1].x
+      dz1 = points[i].z - points[i - 1].z
+      dx2 = points[i + 1].x - points[i].x
+      dz2 = points[i + 1].z - points[i].z
     }
 
-    // Normalize and compute perpendicular
-    const len = Math.sqrt(dx * dx + dz * dz)
-    if (len > 0) {
-      const nx = -dz / len // Perpendicular normal
-      const nz = dx / len
+    // Normalize directions
+    const len1 = Math.sqrt(dx1 * dx1 + dz1 * dz1)
+    const len2 = Math.sqrt(dx2 * dx2 + dz2 * dz2)
+
+    if (len1 > 0 && len2 > 0) {
+      dx1 /= len1; dz1 /= len1
+      dx2 /= len2; dz2 /= len2
+
+      // Calculate perpendicular normals
+      const nx1 = -dz1 * sign
+      const nz1 = dx1 * sign
+      const nx2 = -dz2 * sign
+      const nz2 = dx2 * sign
+
+      // Average the normals for smooth corners
+      let nx = (nx1 + nx2) / 2
+      let nz = (nz1 + nz2) / 2
+      let normalLen = Math.sqrt(nx * nx + nz * nz)
+
+      // Handle the case where normals are opposite (180 degree turn)
+      if (normalLen < 0.001) {
+        nx = nx1
+        nz = nz1
+        normalLen = 1
+      }
+
+      // Calculate miter length based on angle between segments
+      const dot = dx1 * dx2 + dz1 * dz2
+      const angle = Math.acos(Math.max(-1, Math.min(1, dot)))
+      let miterScale = 1 / normalLen
+
+      // Apply miter limit to prevent spikes at sharp corners
+      if (angle > Math.PI * 0.75) {
+        // Very sharp corner - use bevel instead of miter
+        miterScale = 1
+      } else if (miterScale * offset > maxMiterLength) {
+        miterScale = maxMiterLength / offset
+      }
+
+      nx *= miterScale
+      nz *= miterScale
 
       offsetPoints.push(
         new THREE.Vector3(
-          points[i].x + nx * offset * sign,
+          points[i].x + nx * offset,
           points[i].y,
-          points[i].z + nz * offset * sign
+          points[i].z + nz * offset
         )
       )
     } else {
@@ -247,82 +283,54 @@ export function Track3D({ trackId }: Track3DProps) {
         centerLine.position.y = 0.02
         group.add(centerLine)
 
-        // Add start/finish marker
-        const startFinishGeometry = new THREE.BoxGeometry(
-          TRACK_WIDTH * 1.2,
-          0.03,
-          0.15
-        )
-        const startFinishMaterial = new THREE.MeshStandardMaterial({
-          color: 0xffffff,
-          emissive: 0xffffff,
-          emissiveIntensity: 0.7,
-        })
-        const startFinishMesh = new THREE.Mesh(
-          startFinishGeometry,
-          startFinishMaterial
-        )
+        // Add start/finish marker with checkered pattern
+        if (centerPoints.length > 1) {
+          const dx = centerPoints[1].x - centerPoints[0].x
+          const dz = centerPoints[1].z - centerPoints[0].z
+          const angle = Math.atan2(dx, dz)
+          const cos = Math.cos(angle)
+          const sin = Math.sin(angle)
 
-        // Position at first point
-        if (centerPoints.length > 0) {
-          startFinishMesh.position.set(
-            centerPoints[0].x,
-            0.05,
-            centerPoints[0].z
-          )
+          // Create a proper checkered start/finish line
+          const checkerSize = 0.24 // Larger checkers (scaled 3x)
+          const checkerRows = 3
+          const checkerCols = Math.ceil(TRACK_WIDTH / checkerSize)
+          const lineWidth = checkerCols * checkerSize
+          const lineDepth = checkerRows * checkerSize
 
-          // Calculate rotation to align with track direction at start
-          if (centerPoints.length > 1) {
-            const dx = centerPoints[1].x - centerPoints[0].x
-            const dz = centerPoints[1].z - centerPoints[0].z
-            const angle = Math.atan2(dx, dz)
-            startFinishMesh.rotation.y = angle
-          }
-        }
+          for (let row = 0; row < checkerRows; row++) {
+            for (let col = 0; col < checkerCols; col++) {
+              const isBlack = (row + col) % 2 === 1
 
-        group.add(startFinishMesh)
+              const checkerGeom = new THREE.BoxGeometry(
+                checkerSize * 0.98,
+                0.02,
+                checkerSize * 0.98
+              )
+              const checkerMat = new THREE.MeshStandardMaterial({
+                color: isBlack ? 0x000000 : 0xffffff,
+                emissive: isBlack ? 0x000000 : 0xffffff,
+                emissiveIntensity: isBlack ? 0 : 0.3,
+              })
+              const checker = new THREE.Mesh(checkerGeom, checkerMat)
 
-        // Add checkered pattern to start/finish area
-        const checkerSize = 0.08
-        const checkerRows = 2
-        const checkerCols = Math.floor((TRACK_WIDTH * 1.2) / checkerSize)
-        for (let row = 0; row < checkerRows; row++) {
-          for (let col = 0; col < checkerCols; col++) {
-            if ((row + col) % 2 === 0) continue // Skip for checkered pattern
+              // Position relative to start line center
+              const localX = (col - (checkerCols - 1) / 2) * checkerSize
+              const localZ = (row - (checkerRows - 1) / 2) * checkerSize
 
-            const checkerGeom = new THREE.BoxGeometry(
-              checkerSize * 0.9,
-              0.01,
-              checkerSize * 0.9
-            )
-            const checkerMat = new THREE.MeshStandardMaterial({
-              color: 0x000000,
-            })
-            const checker = new THREE.Mesh(checkerGeom, checkerMat)
-
-            // Position relative to start/finish
-            const localX =
-              (col - checkerCols / 2) * checkerSize + checkerSize / 2
-            const localZ = (row - checkerRows / 2) * checkerSize + checkerSize / 2
-
-            // Apply rotation to position
-            if (centerPoints.length > 1) {
-              const dx = centerPoints[1].x - centerPoints[0].x
-              const dz = centerPoints[1].z - centerPoints[0].z
-              const angle = Math.atan2(dx, dz)
-              const cos = Math.cos(angle)
-              const sin = Math.sin(angle)
+              // Apply rotation to position
               const rotX = localX * cos - localZ * sin
               const rotZ = localX * sin + localZ * cos
+
               checker.position.set(
                 centerPoints[0].x + rotX,
-                0.06,
+                0.03 + row * 0.001, // Stagger Y slightly to avoid Z-fighting
                 centerPoints[0].z + rotZ
               )
               checker.rotation.y = angle
-            }
 
-            group.add(checker)
+              group.add(checker)
+            }
           }
         }
 
@@ -378,12 +386,13 @@ function FallbackTrack({ trackId }: { trackId: string }) {
   const calibration = useMemo(() => getTrackCalibration(trackId), [trackId])
   const scale = calibration.render.trackScale
 
-  // Create center points for an oval track
+  // Create center points for an oval track (sized to match 3x scale)
   const centerPoints = useMemo(() => {
     const trackPoints: THREE.Vector3[] = []
     const segments = 64
-    const radiusX = 80 * scale
-    const radiusZ = 40 * scale
+    // Use fixed radii that work with 3x scale (0.3)
+    const radiusX = 24  // Approximately 80 * 0.3
+    const radiusZ = 12  // Approximately 40 * 0.3
 
     for (let i = 0; i <= segments; i++) {
       const angle = (i / segments) * Math.PI * 2
