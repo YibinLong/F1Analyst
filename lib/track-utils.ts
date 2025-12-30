@@ -94,7 +94,7 @@ export function getCarPosition(
   const mapped = mapToTrackSpace(normalized.x, normalized.y, scaleX, scaleZ)
   return {
     x: mapped.x,
-    y: 0.15, // Height above track surface
+    y: 0.45, // Height above track surface (3x scaled)
     z: mapped.z,
   }
 }

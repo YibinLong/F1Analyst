@@ -83,7 +83,7 @@ export function calculateTrackCenter(points: TrackPoint[]): {
  */
 export function svgPointsToTrack3D(
   points: TrackPoint[],
-  scale: number = 0.1
+  scale: number = 0.3  // 3x scale to match Track3D
 ): Track3DPoint[] {
   if (points.length === 0) return []
 
@@ -91,7 +91,7 @@ export function svgPointsToTrack3D(
 
   return points.map(p => ({
     x: (p.x - centerX) * scale,
-    y: 0.15, // Car height above track
+    y: 0.45, // Car height above track (3x scaled)
     z: (p.y - centerY) * scale,
   }))
 }
@@ -120,7 +120,7 @@ export function getPointAtDistance(
   distance: number
 ): { point: Track3DPoint; rotation: number } {
   if (points.length === 0) {
-    return { point: { x: 0, y: 0.15, z: 0 }, rotation: 0 }
+    return { point: { x: 0, y: 0.45, z: 0 }, rotation: 0 }
   }
 
   if (points.length === 1) {
@@ -141,12 +141,13 @@ export function getPointAtDistance(
 
       const point: Track3DPoint = {
         x: points[i - 1].x + dx * t,
-        y: 0.15,
+        y: 0.45, // 3x scaled
         z: points[i - 1].z + dz * t,
       }
 
       // Calculate rotation to face direction of travel
-      const rotation = Math.atan2(dx, dz)
+      // F1Car model has nose pointing along +X, so we subtract PI/2
+      const rotation = Math.atan2(dx, dz) - Math.PI / 2
 
       return { point, rotation }
     }
@@ -162,7 +163,7 @@ export function getPointAtDistance(
 
   return {
     point: points[lastIdx],
-    rotation: Math.atan2(dx, dz)
+    rotation: Math.atan2(dx, dz) - Math.PI / 2
   }
 }
 
@@ -198,8 +199,8 @@ export function distributeCarPositions(
 export function calculateStartingGridPositions(
   points: Track3DPoint[],
   numCars: number,
-  gridSpacing: number = 0.25, // Distance between grid rows
-  laneOffset: number = 0.15 // Left/right offset from center
+  gridSpacing: number = 0.9, // Distance between grid rows (3x scaled)
+  laneOffset: number = 0.54 // Left/right offset from center (3x scaled)
 ): Array<{ position: Track3DPoint; rotation: number }> {
   if (points.length < 2 || numCars === 0) return []
 
@@ -221,7 +222,9 @@ export function calculateStartingGridPositions(
   const perpZ = dirX
 
   // Start rotation (facing direction of travel)
-  const rotation = Math.atan2(dx, dz)
+  // F1Car model has nose pointing along +X, so we subtract PI/2 to align
+  // with the track direction (dx, dz)
+  const rotation = Math.atan2(dx, dz) - Math.PI / 2
 
   for (let i = 0; i < numCars; i++) {
     // Calculate grid row (0, 1, 2, ...) and side (0 = left/pole, 1 = right)
@@ -239,7 +242,7 @@ export function calculateStartingGridPositions(
 
     const position: Track3DPoint = {
       x: startPoint.x - dirX * (backOffset + staggerOffset) + perpX * sideOffset,
-      y: 0.15,
+      y: 0.45, // 3x scaled
       z: startPoint.z - dirZ * (backOffset + staggerOffset) + perpZ * sideOffset,
     }
 
@@ -257,7 +260,7 @@ export function getPositionAlongTrack(
   progress: number // 0-1 around the track
 ): { position: Track3DPoint; rotation: number } {
   if (points.length === 0) {
-    return { position: { x: 0, y: 0.15, z: 0 }, rotation: 0 }
+    return { position: { x: 0, y: 0.45, z: 0 }, rotation: 0 }
   }
 
   const totalLength = calculatePathLength(points)
@@ -301,7 +304,7 @@ export async function fetchTrackPoints(trackId: string): Promise<Track3DPoint[]>
 
       const pathData = pathMatch[1]
       const svgPoints = parseSVGPathData(pathData)
-      const track3DPoints = svgPointsToTrack3D(svgPoints, 0.1)
+      const track3DPoints = svgPointsToTrack3D(svgPoints, 0.3)  // 3x scale
 
       return track3DPoints
     } catch (error) {
@@ -320,15 +323,15 @@ export async function fetchTrackPoints(trackId: string): Promise<Track3DPoint[]>
  */
 export function getDefaultTrackPoints(trackId: string, numPoints: number = 100): Track3DPoint[] {
   // Generate points along an ellipse as fallback
-  // This matches the typical track extent after SVG processing
+  // This matches the typical track extent after SVG processing with 3x scale
   const points: Track3DPoint[] = []
 
   for (let i = 0; i < numPoints; i++) {
     const angle = (i / numPoints) * Math.PI * 2
     points.push({
-      x: Math.cos(angle) * 4,  // ~±4 typical track X extent
-      y: 0.15,
-      z: Math.sin(angle) * 5,  // ~±5 typical track Z extent
+      x: Math.cos(angle) * 12,  // ~±12 typical track X extent (3x scaled)
+      y: 0.45, // 3x scaled car height
+      z: Math.sin(angle) * 15,  // ~±15 typical track Z extent (3x scaled)
     })
   }
 

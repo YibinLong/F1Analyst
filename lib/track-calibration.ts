@@ -41,7 +41,7 @@ const defaultCalibration: TrackCalibration = {
     flipY: false,
   },
   render: {
-    trackScale: 0.1,
+    trackScale: 1.3,
     trackDepth: 0.3,
     carHeight: 0.15,
   },
