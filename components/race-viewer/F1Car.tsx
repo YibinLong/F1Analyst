@@ -68,62 +68,65 @@ export function F1Car({
     }
   }, [materials])
 
+  // Scale factor for 3x track size
+  const s = 3
+
   return (
     <group ref={groupRef} position={position}>
       {/* Main body - elongated box */}
-      <mesh material={materials.body} position={[0, 0.03, 0]}>
-        <boxGeometry args={[0.35, 0.06, 0.14]} />
+      <mesh material={materials.body} position={[0, 0.03 * s, 0]}>
+        <boxGeometry args={[0.35 * s, 0.06 * s, 0.14 * s]} />
       </mesh>
 
       {/* Nose cone - tapered front */}
-      <mesh material={materials.body} position={[0.22, 0.03, 0]}>
-        <boxGeometry args={[0.1, 0.04, 0.08]} />
+      <mesh material={materials.body} position={[0.22 * s, 0.03 * s, 0]}>
+        <boxGeometry args={[0.1 * s, 0.04 * s, 0.08 * s]} />
       </mesh>
 
       {/* Cockpit area - dark canopy */}
-      <mesh material={materials.cockpit} position={[0.02, 0.07, 0]}>
-        <boxGeometry args={[0.12, 0.04, 0.08]} />
+      <mesh material={materials.cockpit} position={[0.02 * s, 0.07 * s, 0]}>
+        <boxGeometry args={[0.12 * s, 0.04 * s, 0.08 * s]} />
       </mesh>
 
       {/* Rear wing - horizontal plane */}
-      <mesh material={materials.body} position={[-0.2, 0.08, 0]}>
-        <boxGeometry args={[0.03, 0.01, 0.18]} />
+      <mesh material={materials.body} position={[-0.2 * s, 0.08 * s, 0]}>
+        <boxGeometry args={[0.03 * s, 0.01 * s, 0.18 * s]} />
       </mesh>
 
       {/* Rear wing end plates */}
-      <mesh material={materials.body} position={[-0.2, 0.07, 0.085]}>
-        <boxGeometry args={[0.04, 0.04, 0.01]} />
+      <mesh material={materials.body} position={[-0.2 * s, 0.07 * s, 0.085 * s]}>
+        <boxGeometry args={[0.04 * s, 0.04 * s, 0.01 * s]} />
       </mesh>
-      <mesh material={materials.body} position={[-0.2, 0.07, -0.085]}>
-        <boxGeometry args={[0.04, 0.04, 0.01]} />
+      <mesh material={materials.body} position={[-0.2 * s, 0.07 * s, -0.085 * s]}>
+        <boxGeometry args={[0.04 * s, 0.04 * s, 0.01 * s]} />
       </mesh>
 
       {/* Front wing */}
-      <mesh material={materials.body} position={[0.28, 0.015, 0]}>
-        <boxGeometry args={[0.02, 0.01, 0.2]} />
+      <mesh material={materials.body} position={[0.28 * s, 0.015 * s, 0]}>
+        <boxGeometry args={[0.02 * s, 0.01 * s, 0.2 * s]} />
       </mesh>
 
       {/* Wheels - 4 cylinders */}
       {/* Front left */}
-      <mesh material={materials.wheels} position={[0.12, 0.02, 0.09]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.025, 0.025, 0.02, 8]} />
+      <mesh material={materials.wheels} position={[0.12 * s, 0.02 * s, 0.09 * s]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.025 * s, 0.025 * s, 0.02 * s, 8]} />
       </mesh>
       {/* Front right */}
-      <mesh material={materials.wheels} position={[0.12, 0.02, -0.09]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.025, 0.025, 0.02, 8]} />
+      <mesh material={materials.wheels} position={[0.12 * s, 0.02 * s, -0.09 * s]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.025 * s, 0.025 * s, 0.02 * s, 8]} />
       </mesh>
       {/* Rear left */}
-      <mesh material={materials.wheels} position={[-0.12, 0.025, 0.085]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.03, 0.03, 0.025, 8]} />
+      <mesh material={materials.wheels} position={[-0.12 * s, 0.025 * s, 0.085 * s]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.03 * s, 0.03 * s, 0.025 * s, 8]} />
       </mesh>
       {/* Rear right */}
-      <mesh material={materials.wheels} position={[-0.12, 0.025, -0.085]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.03, 0.03, 0.025, 8]} />
+      <mesh material={materials.wheels} position={[-0.12 * s, 0.025 * s, -0.085 * s]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.03 * s, 0.03 * s, 0.025 * s, 8]} />
       </mesh>
 
       {/* Halo - safety device */}
-      <mesh material={materials.cockpit} position={[0.05, 0.09, 0]}>
-        <torusGeometry args={[0.04, 0.008, 4, 16, Math.PI]} />
+      <mesh material={materials.cockpit} position={[0.05 * s, 0.09 * s, 0]}>
+        <torusGeometry args={[0.04 * s, 0.008 * s, 4, 16, Math.PI]} />
       </mesh>
 
       {/* Motion trail effect */}
@@ -147,13 +150,15 @@ export function F1Car({
  */
 function MotionTrail({ teamColor }: { teamColor: string }) {
   const trailColor = new THREE.Color(teamColor)
+  // Scale factor for 3x track size
+  const s = 3
 
   // Create Akira-style speed lines using thin elongated shapes
   return (
     <group>
       {/* Main team color trail - center */}
-      <mesh position={[-0.5, 0.025, 0]}>
-        <boxGeometry args={[0.6, 0.012, 0.02]} />
+      <mesh position={[-0.5 * s, 0.025 * s, 0]}>
+        <boxGeometry args={[0.6 * s, 0.012 * s, 0.02 * s]} />
         <meshBasicMaterial
           color={trailColor}
           transparent
@@ -163,8 +168,8 @@ function MotionTrail({ teamColor }: { teamColor: string }) {
       </mesh>
 
       {/* Extended trail - fading */}
-      <mesh position={[-0.9, 0.025, 0]}>
-        <boxGeometry args={[0.5, 0.008, 0.015]} />
+      <mesh position={[-0.9 * s, 0.025 * s, 0]}>
+        <boxGeometry args={[0.5 * s, 0.008 * s, 0.015 * s]} />
         <meshBasicMaterial
           color={trailColor}
           transparent
@@ -174,8 +179,8 @@ function MotionTrail({ teamColor }: { teamColor: string }) {
       </mesh>
 
       {/* Far trail */}
-      <mesh position={[-1.2, 0.025, 0]}>
-        <boxGeometry args={[0.3, 0.005, 0.01]} />
+      <mesh position={[-1.2 * s, 0.025 * s, 0]}>
+        <boxGeometry args={[0.3 * s, 0.005 * s, 0.01 * s]} />
         <meshBasicMaterial
           color={trailColor}
           transparent
@@ -185,8 +190,8 @@ function MotionTrail({ teamColor }: { teamColor: string }) {
       </mesh>
 
       {/* Upper accent line (slightly offset) */}
-      <mesh position={[-0.45, 0.035, 0.03]}>
-        <boxGeometry args={[0.5, 0.008, 0.012]} />
+      <mesh position={[-0.45 * s, 0.035 * s, 0.03 * s]}>
+        <boxGeometry args={[0.5 * s, 0.008 * s, 0.012 * s]} />
         <meshBasicMaterial
           color={0xffffff}
           transparent
@@ -196,8 +201,8 @@ function MotionTrail({ teamColor }: { teamColor: string }) {
       </mesh>
 
       {/* Lower accent line */}
-      <mesh position={[-0.45, 0.035, -0.03]}>
-        <boxGeometry args={[0.5, 0.008, 0.012]} />
+      <mesh position={[-0.45 * s, 0.035 * s, -0.03 * s]}>
+        <boxGeometry args={[0.5 * s, 0.008 * s, 0.012 * s]} />
         <meshBasicMaterial
           color={0xffffff}
           transparent
@@ -207,8 +212,8 @@ function MotionTrail({ teamColor }: { teamColor: string }) {
       </mesh>
 
       {/* Glow effect behind car */}
-      <mesh position={[-0.35, 0.02, 0]}>
-        <boxGeometry args={[0.2, 0.04, 0.12]} />
+      <mesh position={[-0.35 * s, 0.02 * s, 0]}>
+        <boxGeometry args={[0.2 * s, 0.04 * s, 0.12 * s]} />
         <meshBasicMaterial
           color={trailColor}
           transparent
