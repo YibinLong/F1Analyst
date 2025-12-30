@@ -43,32 +43,81 @@ export async function GET(request: Request, { params }: RouteParams) {
   const { meetingKey } = await params
   const meetingKeyNum = parseInt(meetingKey, 10)
 
+  console.log(`\n${'='.repeat(60)}`)
+  console.log(`[API Route DEBUG] 🏎️ GET /api/race/${meetingKey}`)
+  console.log(`${'='.repeat(60)}`)
+
   if (isNaN(meetingKeyNum)) {
+    console.error(`[API Route DEBUG] ❌ Invalid meeting key: ${meetingKey}`)
     return NextResponse.json({ error: "Invalid meeting key" }, { status: 400 })
   }
+
+  console.log(`[API Route DEBUG] 🔍 Looking for Race session for meeting_key: ${meetingKeyNum}`)
 
   // Get the Race session for this meeting
   const session = await getSession(meetingKeyNum, "Race")
 
   if (!session) {
+    console.error(`[API Route DEBUG] ❌ No Race session found for meeting_key: ${meetingKeyNum}`)
     return NextResponse.json(
       { error: "Race session not found for this meeting" },
       { status: 404 }
     )
   }
 
+  console.log(`[API Route DEBUG] ✅ Found session:`, {
+    session_key: session.session_key,
+    session_name: session.session_name,
+    date_start: session.date_start,
+    date_end: session.date_end,
+  })
+
   // Fetch all data in parallel
+  console.log(`[API Route DEBUG] 📡 Fetching all race data for session_key: ${session.session_key}`)
+  console.log(`[API Route DEBUG] 📅 Session time range: ${session.date_start} to ${session.date_end}`)
+
   const [drivers, positions, intervals, laps, locations, raceControl, pitStops, meetings] =
     await Promise.all([
       getDrivers(session.session_key),
       getPositions(session.session_key),
       getIntervals(session.session_key),
       getLaps(session.session_key),
-      getLocations(session.session_key),
+      // Pass date range to avoid "too much data" error from OpenF1
+      getLocations(session.session_key, {
+        dateStart: session.date_start,
+        dateEnd: session.date_end,
+      }),
       getRaceControl(session.session_key),
       getPitStops(session.session_key),
       getMeetings(2025),
     ])
+
+  // DEBUG: Log data summary for each endpoint
+  console.log(`[API Route DEBUG] 📊 Data fetch results summary:`)
+  console.log(`  - drivers:     ${drivers?.length ?? 'null'} records`)
+  console.log(`  - positions:   ${positions?.length ?? 'null'} records`)
+  console.log(`  - intervals:   ${intervals?.length ?? 'null'} records`)
+  console.log(`  - laps:        ${laps?.length ?? 'null'} records`)
+  console.log(`  - locations:   ${locations?.length ?? 'null'} records  ← 🔍 THIS IS THE KEY ONE`)
+  console.log(`  - raceControl: ${raceControl?.length ?? 'null'} records`)
+  console.log(`  - pitStops:    ${pitStops?.length ?? 'null'} records`)
+  console.log(`  - meetings:    ${meetings?.length ?? 'null'} records`)
+
+  if (!locations || locations.length === 0) {
+    console.warn(`[API Route DEBUG] ⚠️ NO LOCATION DATA AVAILABLE for session_key: ${session.session_key}`)
+    console.warn(`[API Route DEBUG] ⚠️ This is why "Location Data Unavailable" is showing!`)
+    console.warn(`[API Route DEBUG] 💡 Possible reasons:`)
+    console.warn(`  1. Race hasn't happened yet (check date_start: ${session.date_start})`)
+    console.warn(`  2. OpenF1 API doesn't have location data for this session`)
+    console.warn(`  3. OpenF1 API is having issues`)
+    console.warn(`  4. The session_key ${session.session_key} might be wrong`)
+  } else {
+    console.log(`[API Route DEBUG] ✅ Location data available: ${locations.length} records`)
+    console.log(`[API Route DEBUG] 📍 Sample location:`, JSON.stringify(locations[0]))
+    // Log unique drivers in location data
+    const uniqueDrivers = [...new Set(locations.map(l => l.driver_number))]
+    console.log(`[API Route DEBUG] 👤 Drivers in location data: ${uniqueDrivers.join(', ')}`)
+  }
 
   // Find meeting info for race metadata
   const meeting = meetings?.find((m) => m.meeting_key === meetingKeyNum)

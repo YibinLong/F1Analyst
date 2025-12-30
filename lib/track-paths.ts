@@ -27,8 +27,9 @@ export const trackPaths: Record<string, string> = {
   monaco:
     "M30,50 Q35,35 55,30 Q75,25 90,35 Q105,45 95,60 Q85,75 70,70 L80,55 Q90,40 75,35 Q60,30 50,40 Q40,50 55,60 Q70,70 60,85 Q50,100 35,90 Q20,80 30,50",
 
-  // Barcelona - Spain
+  // Barcelona - Spain (also known as Catalunya)
   barcelona: "M30,50 Q50,25 90,30 Q130,35 155,55 Q165,65 160,80 Q155,95 130,95 Q100,95 70,85 Q40,75 30,50",
+  catalunya: "M30,50 Q50,25 90,30 Q130,35 155,55 Q165,65 160,80 Q155,95 130,95 Q100,95 70,85 Q40,75 30,50",
 
   // Montreal - Canada
   montreal:

@@ -55,7 +55,7 @@ export interface OpenF1Driver {
   first_name: string
   last_name: string
   headshot_url: string | null
-  country_code: string
+  country_code: string | null
   session_key: number
   meeting_key: number
 }
@@ -93,8 +93,8 @@ export interface OpenF1Position {
  */
 export interface OpenF1Interval {
   driver_number: number
-  interval: number | null
-  gap_to_leader: number | null
+  interval: number | string | null
+  gap_to_leader: number | string | null
   date: string
   session_key: number
   meeting_key: number
@@ -115,7 +115,7 @@ export interface OpenF1Lap {
   i2_speed: number | null
   st_speed: number | null
   is_pit_out_lap: boolean
-  date_start: string
+  date_start: string | null
   session_key: number
   meeting_key: number
 }
@@ -195,8 +195,8 @@ export interface PositionsByLap {
 export interface IntervalsByLap {
   [lap: number]: {
     [driverNumber: number]: {
-      interval: number | null
-      gapToLeader: number | null
+      interval: number | string | null
+      gapToLeader: number | string | null
     }
   }
 }
