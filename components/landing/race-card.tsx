@@ -47,19 +47,6 @@ export function RaceCard({ race }: RaceCardProps) {
               trackId={race.circuitKey}
               className="w-full h-full opacity-60 group-hover:opacity-100 transition-opacity"
             />
-            {/* Glowing dot on track */}
-            <motion.div
-              className="absolute w-2 h-2 rounded-full bg-primary glow-cyan"
-              animate={{
-                x: [0, 20, -10, 15, 0],
-                y: [0, -15, 10, -5, 0],
-              }}
-              transition={{
-                duration: 4,
-                repeat: Number.POSITIVE_INFINITY,
-                ease: "easeInOut",
-              }}
-            />
           </div>
 
           {/* Race Info */}
