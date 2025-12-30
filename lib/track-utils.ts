@@ -1,6 +1,7 @@
 // Track coordinate utilities for mapping OpenF1 location data to track visualization
 
 import type { OpenF1Location } from "@/types/openf1"
+import { getTrackCalibration, transformGPSToTrackSpace } from "./track-calibration"
 
 /**
  * Track coordinate bounds for each circuit
@@ -54,32 +55,6 @@ export function normalizeCoordinates(
 }
 
 /**
- * Map normalized coordinates to 3D track space
- * The Track3D component loads SVGs with viewBox 200x120, centers them,
- * and applies scale 0.1. However, the actual track paths typically
- * occupy a smaller area within the viewBox (roughly 60-140 x 10-110).
- *
- * After Track3D processing:
- * - Track paths get centered at origin (subtract ~100, ~60)
- * - Scaled by 0.1
- * - Resulting track spans roughly ±4 x ±5 in 3D space
- *
- * Car positions need to map to this same space.
- */
-export function mapToTrackSpace(
-  normalizedX: number,
-  normalizedY: number,
-  scaleX = 4,  // Matches actual track extent: ~80 units * 0.1 / 2 = 4
-  scaleZ = 5   // Matches actual track extent: ~100 units * 0.1 / 2 = 5
-): { x: number; z: number } {
-  // Map 0-1 to -scale to +scale range, centered
-  return {
-    x: (normalizedX - 0.5) * 2 * scaleX,
-    z: (normalizedY - 0.5) * 2 * scaleZ,
-  }
-}
-
-/**
  * Get car position from raw coordinates with bounds
  * Uses scale values matching the Track3D rendered track
  */
@@ -87,14 +62,14 @@ export function getCarPosition(
   x: number,
   y: number,
   bounds: TrackBounds,
-  scaleX = 4,  // Match mapToTrackSpace defaults
-  scaleZ = 5
+  trackId: string
 ): { x: number; y: number; z: number } {
-  const normalized = normalizeCoordinates(x, y, bounds)
-  const mapped = mapToTrackSpace(normalized.x, normalized.y, scaleX, scaleZ)
+  const calibration = getTrackCalibration(trackId)
+  const mapped = transformGPSToTrackSpace(x, y, bounds, calibration)
+  const carHeight = calibration.render.carHeight * 3
   return {
     x: mapped.x,
-    y: 0.45, // Height above track surface (3x scaled)
+    y: carHeight,
     z: mapped.z,
   }
 }
@@ -231,7 +206,8 @@ export function findSurroundingLocations(
 export function getInterpolatedPosition(
   driverLocations: OpenF1Location[],
   timestamp: number,
-  bounds: TrackBounds
+  bounds: TrackBounds,
+  trackId: string
 ): { x: number; y: number; z: number } | null {
   const { before, after, t } = findSurroundingLocations(driverLocations, timestamp)
 
@@ -240,11 +216,11 @@ export function getInterpolatedPosition(
   }
 
   if (!after || t === 0) {
-    return getCarPosition(before.x, before.y, bounds)
+    return getCarPosition(before.x, before.y, bounds, trackId)
   }
 
-  const pos1 = getCarPosition(before.x, before.y, bounds)
-  const pos2 = getCarPosition(after.x, after.y, bounds)
+  const pos1 = getCarPosition(before.x, before.y, bounds, trackId)
+  const pos2 = getCarPosition(after.x, after.y, bounds, trackId)
 
   return interpolatePosition(pos1, pos2, t)
 }
@@ -255,12 +231,13 @@ export function getInterpolatedPosition(
 export function getAllDriverPositions(
   locationsByDriver: Map<number, OpenF1Location[]>,
   timestamp: number,
-  bounds: TrackBounds
+  bounds: TrackBounds,
+  trackId: string
 ): Map<number, { x: number; y: number; z: number }> {
   const positions = new Map<number, { x: number; y: number; z: number }>()
 
   for (const [driverNum, locations] of locationsByDriver) {
-    const pos = getInterpolatedPosition(locations, timestamp, bounds)
+    const pos = getInterpolatedPosition(locations, timestamp, bounds, trackId)
     if (pos) {
       positions.set(driverNum, pos)
     }
