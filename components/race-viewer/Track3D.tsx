@@ -412,15 +412,40 @@ function FallbackTrack({ trackId }: { trackId: string }) {
   }, [scale])
 
   // Create road surface and edge geometries
-  const { roadGeometry, leftEdge, rightEdge } = useMemo(() => {
+  const { roadGeometry, leftEdgeLine, rightEdgeLine, leftGlowLine, rightGlowLine } = useMemo(() => {
     const road = createRoadSurface(centerPoints, TRACK_WIDTH)
     const left = offsetPath(centerPoints, TRACK_WIDTH / 2, "left")
     const right = offsetPath(centerPoints, TRACK_WIDTH / 2, "right")
 
+    const leftEdgeGeometry = new THREE.BufferGeometry().setFromPoints(left)
+    const rightEdgeGeometry = new THREE.BufferGeometry().setFromPoints(right)
+
+    // Create THREE.Line objects to avoid SVG line element conflict
+    const leftEdge = new THREE.Line(
+      leftEdgeGeometry,
+      new THREE.LineBasicMaterial({ color: 0xffffff })
+    )
+    const rightEdge = new THREE.Line(
+      rightEdgeGeometry,
+      new THREE.LineBasicMaterial({ color: 0xffffff })
+    )
+    const leftGlow = new THREE.Line(
+      leftEdgeGeometry.clone(),
+      new THREE.LineBasicMaterial({ color: 0x00d4ff, transparent: true, opacity: 0.3 })
+    )
+    leftGlow.position.y = -0.005
+    const rightGlow = new THREE.Line(
+      rightEdgeGeometry.clone(),
+      new THREE.LineBasicMaterial({ color: 0x00d4ff, transparent: true, opacity: 0.3 })
+    )
+    rightGlow.position.y = -0.005
+
     return {
       roadGeometry: road,
-      leftEdge: new THREE.BufferGeometry().setFromPoints(left),
-      rightEdge: new THREE.BufferGeometry().setFromPoints(right),
+      leftEdgeLine: leftEdge,
+      rightEdgeLine: rightEdge,
+      leftGlowLine: leftGlow,
+      rightGlowLine: rightGlow,
     }
   }, [centerPoints])
 
@@ -442,24 +467,16 @@ function FallbackTrack({ trackId }: { trackId: string }) {
       </mesh>
 
       {/* Left edge line */}
-      <line geometry={leftEdge}>
-        <lineBasicMaterial color={0xffffff} />
-      </line>
+      <primitive object={leftEdgeLine} />
 
       {/* Right edge line */}
-      <line geometry={rightEdge}>
-        <lineBasicMaterial color={0xffffff} />
-      </line>
+      <primitive object={rightEdgeLine} />
 
       {/* Left edge glow */}
-      <line geometry={leftEdge.clone()} position={[0, -0.005, 0]}>
-        <lineBasicMaterial color={0x00d4ff} transparent opacity={0.3} />
-      </line>
+      <primitive object={leftGlowLine} />
 
       {/* Right edge glow */}
-      <line geometry={rightEdge.clone()} position={[0, -0.005, 0]}>
-        <lineBasicMaterial color={0x00d4ff} transparent opacity={0.3} />
-      </line>
+      <primitive object={rightGlowLine} />
 
       {/* Start/Finish marker */}
       <mesh
