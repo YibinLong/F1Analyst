@@ -192,8 +192,8 @@ function AnimatedCar({
   totalLaps: number
 }) {
   const groupRef = useRef<THREE.Group>(null)
-  const targetPosition = useRef({ x: 0, y: 0.15, z: 0 })
-  const previousPosition = useRef({ x: 0, y: 0.15, z: 0 })
+  const targetPosition = useRef({ x: 0, y: 0.45, z: 0 })
+  const previousPosition = useRef({ x: 0, y: 0.45, z: 0 })
   const currentRotation = useRef(0)
 
   // Calculate target position based on current lap and progress
@@ -288,21 +288,22 @@ function CarFallback({
   // Calculate target position based on lap and progress
   const { targetPosition, targetRotation } = useMemo(() => {
     if (trackPoints.length < 2) {
-      // Fallback to ellipse if no track points available
+      // Fallback to ellipse if no track points available (with 3x scale)
       const numCars = totalCars
       const progress = ((currentLap - 1) + lapProgress) / totalLaps
       const baseAngle = (progress * Math.PI * 2) + (Math.PI / 4)
       const angle = baseAngle + (index / numCars) * Math.PI * 2
-      const radiusX = 3.5
-      const radiusZ = 4
+      const radiusX = 10.5  // 3x scaled
+      const radiusZ = 12    // 3x scaled
       const x = Math.cos(angle) * radiusX
       const z = Math.sin(angle) * radiusZ
       const nextAngle = angle + 0.1
       const nextX = Math.cos(nextAngle) * radiusX
       const nextZ = Math.sin(nextAngle) * radiusZ
-      const carRotation = Math.atan2(nextX - x, nextZ - z)
+      // F1Car model faces +X, so subtract PI/2
+      const carRotation = Math.atan2(nextX - x, nextZ - z) - Math.PI / 2
       return {
-        targetPosition: { x, y: 0.15, z },
+        targetPosition: { x, y: 0.45, z },  // 3x scaled car height
         targetRotation: carRotation
       }
     }
@@ -311,7 +312,8 @@ function CarFallback({
     const isStartingGrid = currentLap === 1 && lapProgress < 0.02
 
     if (isStartingGrid) {
-      const gridPositions = calculateStartingGridPositions(trackPoints, totalCars, 0.3, 0.18)
+      // Use default spacing (0.9, 0.54) from calculateStartingGridPositions
+      const gridPositions = calculateStartingGridPositions(trackPoints, totalCars)
       if (gridPositions.length > 0) {
         const carData = gridPositions[index % gridPositions.length]
         if (carData && carData.position) {
@@ -421,11 +423,11 @@ function Scene({
 }: SceneProps) {
   return (
     <>
-      <PerspectiveCamera makeDefault position={[0, 12, 15]} fov={50} />
+      <PerspectiveCamera makeDefault position={[0, 36, 45]} fov={50} />
       <OrbitControls
         enablePan={false}
-        minDistance={10}
-        maxDistance={30}
+        minDistance={30}
+        maxDistance={150}
         minPolarAngle={Math.PI / 6}
         maxPolarAngle={Math.PI / 2.5}
         autoRotate
