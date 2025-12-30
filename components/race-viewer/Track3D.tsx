@@ -4,15 +4,27 @@ import { useEffect, useState, useMemo } from "react"
 import * as THREE from "three"
 import { SVGLoader } from "three/examples/jsm/loaders/SVGLoader.js"
 import { getTrackCalibration } from "@/lib/track-calibration"
+import { getStartLineMeta, TRACK_WIDTH, type StartLineMeta } from "@/lib/track-svg-utils"
 
 interface Track3DProps {
   trackId: string
+  startMeta?: StartLineMeta
 }
 
 // Track width in 3D units (this makes the road wide enough for cars)
 // Width allows approximately 3 cars abreast at any point
-const TRACK_WIDTH = 2.4
-const TRACK_EDGE_WIDTH = 0.12
+function dedupePoints(points: THREE.Vector3[]): THREE.Vector3[] {
+  const result: THREE.Vector3[] = []
+
+  for (const p of points) {
+    const last = result[result.length - 1]
+    if (!last || last.distanceToSquared(p) > 1e-6) {
+      result.push(p.clone())
+    }
+  }
+
+  return result
+}
 
 /**
  * Calculate offset points to create track edges
@@ -29,28 +41,18 @@ function offsetPath(
   const offsetPoints: THREE.Vector3[] = []
   const sign = side === "left" ? -1 : 1
   const maxMiterLength = offset * 2 // Limit miter to prevent spikes at sharp corners
+  const len = points.length
 
-  for (let i = 0; i < points.length; i++) {
-    // Calculate incoming and outgoing directions
-    let dx1 = 0, dz1 = 0, dx2 = 0, dz2 = 0
+  for (let i = 0; i < len; i++) {
+    const prev = points[(i - 1 + len) % len]
+    const curr = points[i]
+    const next = points[(i + 1) % len]
 
-    if (i === 0) {
-      // First point: use direction to next point
-      dx1 = dx2 = points[1].x - points[0].x
-      dz1 = dz2 = points[1].z - points[0].z
-    } else if (i === points.length - 1) {
-      // Last point: use direction from previous point
-      dx1 = dx2 = points[i].x - points[i - 1].x
-      dz1 = dz2 = points[i].z - points[i - 1].z
-    } else {
-      // Middle points: separate incoming and outgoing directions
-      dx1 = points[i].x - points[i - 1].x
-      dz1 = points[i].z - points[i - 1].z
-      dx2 = points[i + 1].x - points[i].x
-      dz2 = points[i + 1].z - points[i].z
-    }
+    let dx1 = curr.x - prev.x
+    let dz1 = curr.z - prev.z
+    let dx2 = next.x - curr.x
+    let dz2 = next.z - curr.z
 
-    // Normalize directions
     const len1 = Math.sqrt(dx1 * dx1 + dz1 * dz1)
     const len2 = Math.sqrt(dx2 * dx2 + dz2 * dz2)
 
@@ -94,13 +96,13 @@ function offsetPath(
 
       offsetPoints.push(
         new THREE.Vector3(
-          points[i].x + nx * offset,
-          points[i].y,
-          points[i].z + nz * offset
+          curr.x + nx * offset,
+          curr.y,
+          curr.z + nz * offset
         )
       )
     } else {
-      offsetPoints.push(points[i].clone())
+      offsetPoints.push(curr.clone())
     }
   }
 
@@ -119,9 +121,10 @@ function createRoadSurface(
 
   const vertices: number[] = []
   const indices: number[] = []
+  const len = centerPoints.length
 
   // Create vertices from both edges
-  for (let i = 0; i < centerPoints.length; i++) {
+  for (let i = 0; i < len; i++) {
     // Left vertex
     vertices.push(leftEdge[i].x, leftEdge[i].y, leftEdge[i].z)
     // Right vertex
@@ -129,11 +132,12 @@ function createRoadSurface(
   }
 
   // Create triangle indices
-  for (let i = 0; i < centerPoints.length - 1; i++) {
+  for (let i = 0; i < len; i++) {
+    const next = (i + 1) % len
     const bl = i * 2 // Bottom left
     const br = i * 2 + 1 // Bottom right
-    const tl = (i + 1) * 2 // Top left
-    const tr = (i + 1) * 2 + 1 // Top right
+    const tl = next * 2 // Top left
+    const tr = next * 2 + 1 // Top right
 
     // Two triangles per quad
     indices.push(bl, br, tl)
@@ -157,7 +161,7 @@ function createRoadSurface(
  * Loads circuit SVG files and renders them as 3D track meshes.
  * Creates a proper road surface with left/right edges and asphalt.
  */
-export function Track3D({ trackId }: Track3DProps) {
+export function Track3D({ trackId, startMeta }: Track3DProps) {
   const [trackGroup, setTrackGroup] = useState<THREE.Group | null>(null)
   const [loadError, setLoadError] = useState(false)
 
@@ -178,7 +182,7 @@ export function Track3D({ trackId }: Track3DProps) {
 
         paths.forEach((path) => {
           path.subPaths.forEach((subPath) => {
-            const points = subPath.getPoints()
+            const points = subPath.getSpacedPoints(400)
             allPoints = allPoints.concat(points)
           })
         })
@@ -207,14 +211,18 @@ export function Track3D({ trackId }: Track3DProps) {
         const scale = calibration.render.trackScale
 
         // Convert to centered 3D points
-        const centerPoints: THREE.Vector3[] = allPoints.map(
-          (p) =>
-            new THREE.Vector3(
-              (p.x - centerX) * scale,
-              0.01, // Slightly above ground
-              (p.y - centerY) * scale
-            )
+        const centerPoints: THREE.Vector3[] = dedupePoints(
+          allPoints.map(
+            (p) =>
+              new THREE.Vector3(
+                (p.x - centerX) * scale,
+                0.01, // Slightly above ground
+                (p.y - centerY) * scale
+              )
+          )
         )
+        const centerMetaPoints = centerPoints.map((p) => ({ x: p.x, y: p.y, z: p.z }))
+        const startInfo = startMeta ?? getStartLineMeta(centerMetaPoints)
 
         // Create road surface (dark asphalt)
         const roadGeometry = createRoadSurface(centerPoints, TRACK_WIDTH)
@@ -231,7 +239,7 @@ export function Track3D({ trackId }: Track3DProps) {
         // Create left edge (white line)
         const leftEdgePoints = offsetPath(centerPoints, TRACK_WIDTH / 2, "left")
         const leftLineGeometry =
-          new THREE.BufferGeometry().setFromPoints(leftEdgePoints)
+          new THREE.BufferGeometry().setFromPoints([...leftEdgePoints, leftEdgePoints[0]])
         const edgeMaterial = new THREE.LineBasicMaterial({
           color: 0xffffff,
           linewidth: 2,
@@ -247,7 +255,7 @@ export function Track3D({ trackId }: Track3DProps) {
           "right"
         )
         const rightLineGeometry =
-          new THREE.BufferGeometry().setFromPoints(rightEdgePoints)
+          new THREE.BufferGeometry().setFromPoints([...rightEdgePoints, rightEdgePoints[0]])
         const rightLine = new THREE.Line(rightLineGeometry, edgeMaterial.clone())
         rightLine.position.y = 0.02
         group.add(rightLine)
@@ -272,7 +280,7 @@ export function Track3D({ trackId }: Track3DProps) {
 
         // Add subtle center racing line
         const centerLineGeometry =
-          new THREE.BufferGeometry().setFromPoints(centerPoints)
+          new THREE.BufferGeometry().setFromPoints([...centerPoints, centerPoints[0]])
         const centerLineMaterial = new THREE.LineBasicMaterial({
           color: 0x00d4ff,
           transparent: true,
@@ -285,9 +293,7 @@ export function Track3D({ trackId }: Track3DProps) {
 
         // Add start/finish marker with checkered pattern
         if (centerPoints.length > 1) {
-          const dx = centerPoints[1].x - centerPoints[0].x
-          const dz = centerPoints[1].z - centerPoints[0].z
-          const angle = Math.atan2(dx, dz)
+          const angle = Math.atan2(startInfo.direction.x, startInfo.direction.z) + Math.PI / 2
           const cos = Math.cos(angle)
           const sin = Math.sin(angle)
 
@@ -295,8 +301,6 @@ export function Track3D({ trackId }: Track3DProps) {
           const checkerSize = 0.24 // Larger checkers (scaled 3x)
           const checkerRows = 3
           const checkerCols = Math.ceil(TRACK_WIDTH / checkerSize)
-          const lineWidth = checkerCols * checkerSize
-          const lineDepth = checkerRows * checkerSize
 
           for (let row = 0; row < checkerRows; row++) {
             for (let col = 0; col < checkerCols; col++) {
@@ -323,9 +327,9 @@ export function Track3D({ trackId }: Track3DProps) {
               const rotZ = localX * sin + localZ * cos
 
               checker.position.set(
-                centerPoints[0].x + rotX,
+                startInfo.startPoint.x + rotX,
                 0.03 + row * 0.001, // Stagger Y slightly to avoid Z-fighting
-                centerPoints[0].z + rotZ
+                startInfo.startPoint.z + rotZ
               )
               checker.rotation.y = angle
 
@@ -363,7 +367,7 @@ export function Track3D({ trackId }: Track3DProps) {
         })
       }
     }
-  }, [trackId, calibration])
+  }, [trackId, calibration, startMeta])
 
   // Render fallback if SVG loading failed
   if (loadError) {
@@ -390,11 +394,10 @@ function FallbackTrack({ trackId }: { trackId: string }) {
   const centerPoints = useMemo(() => {
     const trackPoints: THREE.Vector3[] = []
     const segments = 64
-    // Use fixed radii that work with 3x scale (0.3)
-    const radiusX = 24  // Approximately 80 * 0.3
-    const radiusZ = 12  // Approximately 40 * 0.3
+    const radiusX = 90 * scale
+    const radiusZ = 55 * scale
 
-    for (let i = 0; i <= segments; i++) {
+    for (let i = 0; i < segments; i++) {
       const angle = (i / segments) * Math.PI * 2
       trackPoints.push(
         new THREE.Vector3(
@@ -420,6 +423,11 @@ function FallbackTrack({ trackId }: { trackId: string }) {
       rightEdge: new THREE.BufferGeometry().setFromPoints(right),
     }
   }, [centerPoints])
+
+  const startInfo = useMemo(
+    () => getStartLineMeta(centerPoints.map((p) => ({ x: p.x, y: p.y, z: p.z }))),
+    [centerPoints]
+  )
 
   return (
     <group>
@@ -454,7 +462,14 @@ function FallbackTrack({ trackId }: { trackId: string }) {
       </line>
 
       {/* Start/Finish marker */}
-      <mesh position={[centerPoints[0]?.x || 0, 0.05, centerPoints[0]?.z || 4]}>
+      <mesh
+        position={[
+          startInfo.startPoint.x,
+          0.05,
+          startInfo.startPoint.z,
+        ]}
+        rotation={[0, Math.atan2(startInfo.direction.x, startInfo.direction.z) + Math.PI / 2, 0]}
+      >
         <boxGeometry args={[TRACK_WIDTH * 1.2, 0.03, 0.15]} />
         <meshStandardMaterial
           color="#ffffff"
