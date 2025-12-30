@@ -5,6 +5,14 @@
  * path points for car positioning. This ensures cars are placed ON
  * the actual track line instead of an approximation.
  */
+import { getTrackCalibration } from "./track-calibration"
+
+export interface StartLineMeta {
+  startPoint: Track3DPoint
+  direction: { x: number; z: number }
+  rotation: number
+  startOffset: number
+}
 
 export interface TrackPoint {
   x: number
@@ -15,6 +23,21 @@ export interface Track3DPoint {
   x: number
   y: number
   z: number
+}
+
+export const TRACK_WIDTH = 2.4
+
+function dedupeTrack3DPoints(points: Track3DPoint[]): Track3DPoint[] {
+  const result: Track3DPoint[] = []
+
+  for (const p of points) {
+    const last = result[result.length - 1]
+    if (!last || Math.abs(p.x - last.x) > 1e-4 || Math.abs(p.z - last.z) > 1e-4) {
+      result.push(p)
+    }
+  }
+
+  return result
 }
 
 /**
@@ -83,15 +106,18 @@ export function calculateTrackCenter(points: TrackPoint[]): {
  */
 export function svgPointsToTrack3D(
   points: TrackPoint[],
-  scale: number = 0.3  // 3x scale to match Track3D
+  trackId: string
 ): Track3DPoint[] {
   if (points.length === 0) return []
 
+  const calibration = getTrackCalibration(trackId)
+  const scale = calibration.render.trackScale
+  const carHeight = calibration.render.carHeight * 3
   const { centerX, centerY } = calculateTrackCenter(points)
 
   return points.map(p => ({
     x: (p.x - centerX) * scale,
-    y: 0.45, // Car height above track (3x scaled)
+    y: carHeight,
     z: (p.y - centerY) * scale,
   }))
 }
@@ -99,13 +125,16 @@ export function svgPointsToTrack3D(
 /**
  * Calculate total path length from 3D points
  */
-export function calculatePathLength(points: Track3DPoint[]): number {
+export function calculatePathLength(points: Track3DPoint[], closed: boolean = true): number {
   if (points.length < 2) return 0
 
   let length = 0
-  for (let i = 1; i < points.length; i++) {
-    const dx = points[i].x - points[i - 1].x
-    const dz = points[i].z - points[i - 1].z
+  const segmentCount = closed ? points.length : points.length - 1
+
+  for (let i = 0; i < segmentCount; i++) {
+    const nextIndex = (i + 1) % points.length
+    const dx = points[nextIndex].x - points[i].x
+    const dz = points[nextIndex].z - points[i].z
     length += Math.sqrt(dx * dx + dz * dz)
   }
 
@@ -117,7 +146,8 @@ export function calculatePathLength(points: Track3DPoint[]): number {
  */
 export function getPointAtDistance(
   points: Track3DPoint[],
-  distance: number
+  distance: number,
+  closed: boolean = true
 ): { point: Track3DPoint; rotation: number } {
   if (points.length === 0) {
     return { point: { x: 0, y: 0.45, z: 0 }, rotation: 0 }
@@ -127,22 +157,33 @@ export function getPointAtDistance(
     return { point: points[0], rotation: 0 }
   }
 
-  let traveled = 0
+  const totalLength = calculatePathLength(points, closed)
+  if (totalLength === 0) {
+    return { point: points[0], rotation: 0 }
+  }
 
-  for (let i = 1; i < points.length; i++) {
-    const dx = points[i].x - points[i - 1].x
-    const dz = points[i].z - points[i - 1].z
+  const target = closed
+    ? ((distance % totalLength) + totalLength) % totalLength
+    : Math.max(0, Math.min(distance, totalLength))
+
+  let traveled = 0
+  const segmentCount = closed ? points.length : points.length - 1
+
+  for (let i = 0; i < segmentCount; i++) {
+    const nextIndex = (i + 1) % points.length
+    const dx = points[nextIndex].x - points[i].x
+    const dz = points[nextIndex].z - points[i].z
     const segmentLength = Math.sqrt(dx * dx + dz * dz)
 
-    if (traveled + segmentLength >= distance) {
+    if (traveled + segmentLength >= target) {
       // Interpolate within this segment
-      const remaining = distance - traveled
+      const remaining = target - traveled
       const t = segmentLength > 0 ? remaining / segmentLength : 0
 
       const point: Track3DPoint = {
-        x: points[i - 1].x + dx * t,
-        y: 0.45, // 3x scaled
-        z: points[i - 1].z + dz * t,
+        x: points[i].x + dx * t,
+        y: points[i].y,
+        z: points[i].z + dz * t,
       }
 
       // Calculate rotation to face direction of travel
@@ -156,8 +197,8 @@ export function getPointAtDistance(
   }
 
   // Return last point if distance exceeds path length
-  const lastIdx = points.length - 1
-  const prevIdx = points.length - 2
+  const lastIdx = closed ? 0 : points.length - 1
+  const prevIdx = closed ? segmentCount - 1 : points.length - 2
   const dx = points[lastIdx].x - points[prevIdx].x
   const dz = points[lastIdx].z - points[prevIdx].z
 
@@ -199,32 +240,24 @@ export function distributeCarPositions(
 export function calculateStartingGridPositions(
   points: Track3DPoint[],
   numCars: number,
-  gridSpacing: number = 0.9, // Distance between grid rows (3x scaled)
-  laneOffset: number = 0.54 // Left/right offset from center (3x scaled)
+  gridSpacing: number = TRACK_WIDTH * 1.6, // Distance between grid rows
+  laneOffset: number = TRACK_WIDTH * 0.35, // Left/right offset from center
+  startMeta?: StartLineMeta
 ): Array<{ position: Track3DPoint; rotation: number }> {
   if (points.length < 2 || numCars === 0) return []
 
+  const meta = startMeta ?? getStartLineMeta(points)
   const result: Array<{ position: Track3DPoint; rotation: number }> = []
 
-  // Get direction at start line
-  const startPoint = points[0]
-  const nextPoint = points[1]
-  const dx = nextPoint.x - startPoint.x
-  const dz = nextPoint.z - startPoint.z
-  const len = Math.sqrt(dx * dx + dz * dz)
-
-  // Normalize direction
-  const dirX = dx / len
-  const dirZ = dz / len
+  const dirX = meta.direction.x
+  const dirZ = meta.direction.z
 
   // Perpendicular for lane offset
   const perpX = -dirZ
   const perpZ = dirX
 
-  // Start rotation (facing direction of travel)
-  // F1Car model has nose pointing along +X, so we subtract PI/2 to align
-  // with the track direction (dx, dz)
-  const rotation = Math.atan2(dx, dz) - Math.PI / 2
+  const rotation = meta.rotation
+  const startPoint = meta.startPoint
 
   for (let i = 0; i < numCars; i++) {
     // Calculate grid row (0, 1, 2, ...) and side (0 = left/pole, 1 = right)
@@ -235,7 +268,7 @@ export function calculateStartingGridPositions(
     const backOffset = (row + 1) * gridSpacing
 
     // Stagger effect: odd rows are offset slightly more
-    const staggerOffset = side === 1 ? gridSpacing * 0.4 : 0
+    const staggerOffset = side === 1 ? gridSpacing * 0.35 : 0
 
     // Lane offset (left for pole, right for other)
     const sideOffset = side === 0 ? laneOffset : -laneOffset
@@ -257,14 +290,16 @@ export function calculateStartingGridPositions(
  */
 export function getPositionAlongTrack(
   points: Track3DPoint[],
-  progress: number // 0-1 around the track
+  progress: number, // 0-1 around the track
+  startOffset: number = 0
 ): { position: Track3DPoint; rotation: number } {
   if (points.length === 0) {
     return { position: { x: 0, y: 0.45, z: 0 }, rotation: 0 }
   }
 
   const totalLength = calculatePathLength(points)
-  const targetDistance = (progress % 1) * totalLength
+  const adjustedProgress = (progress + startOffset) % 1
+  const targetDistance = adjustedProgress * totalLength
 
   return getPointAtDistance(points, targetDistance)
 }
@@ -304,7 +339,7 @@ export async function fetchTrackPoints(trackId: string): Promise<Track3DPoint[]>
 
       const pathData = pathMatch[1]
       const svgPoints = parseSVGPathData(pathData)
-      const track3DPoints = svgPointsToTrack3D(svgPoints, 0.3)  // 3x scale
+      const track3DPoints = dedupeTrack3DPoints(svgPointsToTrack3D(svgPoints, trackId))
 
       return track3DPoints
     } catch (error) {
@@ -323,15 +358,21 @@ export async function fetchTrackPoints(trackId: string): Promise<Track3DPoint[]>
  */
 export function getDefaultTrackPoints(trackId: string, numPoints: number = 100): Track3DPoint[] {
   // Generate points along an ellipse as fallback
-  // This matches the typical track extent after SVG processing with 3x scale
+  // This matches the typical track extent after SVG processing with calibration scale
   const points: Track3DPoint[] = []
+  const calibration = getTrackCalibration(trackId)
+  const scale = calibration.render.trackScale
+  const carHeight = calibration.render.carHeight * 3
+
+  const radiusX = 90 * scale
+  const radiusZ = 55 * scale
 
   for (let i = 0; i < numPoints; i++) {
     const angle = (i / numPoints) * Math.PI * 2
     points.push({
-      x: Math.cos(angle) * 12,  // ~±12 typical track X extent (3x scaled)
-      y: 0.45, // 3x scaled car height
-      z: Math.sin(angle) * 15,  // ~±15 typical track Z extent (3x scaled)
+      x: Math.cos(angle) * radiusX,
+      y: carHeight,
+      z: Math.sin(angle) * radiusZ,
     })
   }
 
@@ -343,4 +384,92 @@ export function getDefaultTrackPoints(trackId: string, numPoints: number = 100):
  */
 export function clearTrackCache(): void {
   trackCache.clear()
+}
+
+/**
+ * Calculate start/finish line metadata for a track
+ * Uses the longest straight as the start location for stability across circuits.
+ */
+export function getStartLineMeta(points: Track3DPoint[]): StartLineMeta {
+  if (points.length < 2) {
+    return {
+      startPoint: { x: 0, y: 0.45, z: 0 },
+      direction: { x: 1, z: 0 },
+      rotation: -Math.PI / 2,
+      startOffset: 0,
+    }
+  }
+
+  const totalLength = calculatePathLength(points)
+  const segmentCount = points.length
+  let longestIdx = 0
+  let longestLength = 0
+  const cumulative: number[] = [0]
+
+  for (let i = 0; i < segmentCount; i++) {
+    const nextIndex = (i + 1) % points.length
+    const dx = points[nextIndex].x - points[i].x
+    const dz = points[nextIndex].z - points[i].z
+    const segLength = Math.sqrt(dx * dx + dz * dz)
+
+    cumulative.push(cumulative[i] + segLength)
+
+    if (segLength > longestLength) {
+      longestLength = segLength
+      longestIdx = i
+    }
+  }
+
+  const nextIdx = (longestIdx + 1) % points.length
+  const dx = points[nextIdx].x - points[longestIdx].x
+  const dz = points[nextIdx].z - points[longestIdx].z
+  const directionLen = Math.sqrt(dx * dx + dz * dz) || 1
+  const dirX = dx / directionLen
+  const dirZ = dz / directionLen
+
+  // Place start line a bit down the longest straight to avoid corners
+  const startDistance = cumulative[longestIdx] + longestLength * 0.35
+  const startProgress = totalLength > 0 ? (startDistance % totalLength) / totalLength : 0
+  const { point, rotation } = getPointAtDistance(points, startDistance)
+
+  return {
+    startPoint: { ...point, y: points[0].y },
+    direction: { x: dirX, z: dirZ },
+    rotation,
+    startOffset: startProgress,
+  }
+}
+
+/**
+ * Fetch the raw SVG path string for rendering outlines (landing page)
+ */
+const trackPathCache = new Map<string, Promise<string | null>>()
+
+export async function fetchTrackPathD(trackId: string): Promise<string | null> {
+  if (trackPathCache.has(trackId)) {
+    return trackPathCache.get(trackId)!
+  }
+
+  const promise = (async () => {
+    try {
+      const response = await fetch(`/tracks/${trackId}.svg`)
+      if (!response.ok) {
+        console.warn(`Failed to fetch track SVG for ${trackId}`)
+        return null
+      }
+
+      const svgText = await response.text()
+      const pathMatch =
+        svgText.match(/stroke="#00d4ff"[^>]*d="([^"]+)"/i) ||
+        svgText.match(/d="([^"]+)"/i)
+
+      return pathMatch ? pathMatch[1] : null
+    } catch (error) {
+      console.error(`Error fetching track path for ${trackId}:`, error)
+      return null
+    }
+  })()
+
+  trackPathCache.set(trackId, promise)
+  return promise
 }
