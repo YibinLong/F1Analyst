@@ -21,7 +21,7 @@ import {
   getPositionAlongTrack,
   getDefaultTrackPoints,
   getStartLineMeta,
-  TRACK_WIDTH,
+  getTrackWidth,
   type StartLineMeta,
   type Track3DPoint,
 } from "@/lib/track-svg-utils"
@@ -236,14 +236,16 @@ function AnimatedCar({
 
     if (distance > 0.0005) {
       // Calculate target rotation from movement direction
-      const targetRotation = Math.atan2(dx, dz)
+      // F1Car model faces +X, so subtract PI/2 to align with movement direction
+      const targetRotation = Math.atan2(dx, dz) - Math.PI / 2
 
       // Smooth rotation with wrap-around handling
       let rotationDiff = targetRotation - currentRotation.current
       if (rotationDiff > Math.PI) rotationDiff -= Math.PI * 2
       if (rotationDiff < -Math.PI) rotationDiff += Math.PI * 2
 
-      currentRotation.current += rotationDiff * 0.08
+      // Increased smoothing factor for faster response (was 0.08)
+      currentRotation.current += rotationDiff * 0.15
       groupRef.current.rotation.y = currentRotation.current
     }
   })
@@ -291,6 +293,7 @@ function CarFallback({
   const currentRotation = useRef(0)
   const calibration = useMemo(() => getTrackCalibration(trackId), [trackId])
   const carHeight = calibration.render.carHeight * 3
+  const trackWidth = calibration.render.trackWidth
 
   // Calculate target position based on lap and progress
   const { targetPosition, targetRotation } = useMemo(() => {
@@ -321,11 +324,12 @@ function CarFallback({
     const isStartingGrid = currentLap === 1 && lapProgress < 0.02
 
     if (isStartingGrid) {
+      // Use track-specific width for grid positioning
       const gridPositions = calculateStartingGridPositions(
         trackPoints,
         totalCars,
-        TRACK_WIDTH * 1.6,
-        TRACK_WIDTH * 0.35,
+        trackWidth * 1.6,  // Row spacing relative to track width
+        trackWidth * 0.35, // Lane offset relative to track width
         meta
       )
       if (gridPositions.length > 0) {
@@ -363,7 +367,7 @@ function CarFallback({
       targetPosition: { ...result.position, y: carHeight },
       targetRotation: result.rotation
     }
-  }, [trackPoints, index, totalCars, currentLap, lapProgress, totalLaps, calibration.render.trackScale, carHeight, startMeta])
+  }, [trackPoints, index, totalCars, currentLap, lapProgress, totalLaps, calibration.render.trackScale, carHeight, trackWidth, startMeta])
 
   // Smooth animation every frame
   useFrame(() => {
