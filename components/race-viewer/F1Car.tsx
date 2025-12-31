@@ -275,7 +275,8 @@ export function AnimatedF1Car({
 
     if (distance > 0.001) {
       // Calculate target rotation (atan2 gives angle from movement direction)
-      const targetRotation = Math.atan2(dx, dz)
+      // F1Car model faces +X, so subtract PI/2 to align with movement direction
+      const targetRotation = Math.atan2(dx, dz) - Math.PI / 2
 
       // Smooth rotation interpolation with wrap-around handling
       let rotationDiff = targetRotation - currentRotation.current
@@ -284,7 +285,8 @@ export function AnimatedF1Car({
       if (rotationDiff > Math.PI) rotationDiff -= Math.PI * 2
       if (rotationDiff < -Math.PI) rotationDiff += Math.PI * 2
 
-      currentRotation.current += rotationDiff * 0.1
+      // Increased smoothing factor for faster response (was 0.1)
+      currentRotation.current += rotationDiff * 0.15
       groupRef.current.rotation.y = currentRotation.current
     }
 

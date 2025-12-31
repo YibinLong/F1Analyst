@@ -25,7 +25,17 @@ export interface Track3DPoint {
   z: number
 }
 
+// Default track width in 3D units (used when calibration not available)
 export const TRACK_WIDTH = 2.4
+
+/**
+ * Get track width for a specific track from calibration
+ */
+export function getTrackWidth(trackId?: string): number {
+  if (!trackId) return TRACK_WIDTH
+  const calibration = getTrackCalibration(trackId)
+  return calibration.render.trackWidth ?? TRACK_WIDTH
+}
 
 function dedupeTrack3DPoints(points: Track3DPoint[]): Track3DPoint[] {
   const result: Track3DPoint[] = []

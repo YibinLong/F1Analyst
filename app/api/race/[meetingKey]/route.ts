@@ -16,6 +16,7 @@ import {
   mapCircuitToKey,
 } from "@/lib/openf1"
 import { teamColors, drivers2025, type Driver } from "@/lib/f1-teams"
+import { SEASON_YEAR } from "@/lib/season"
 import type { Race } from "@/lib/race-data"
 
 interface RouteParams {
@@ -89,7 +90,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       }),
       getRaceControl(session.session_key),
       getPitStops(session.session_key),
-      getMeetings(2025),
+      getMeetings(SEASON_YEAR),
     ])
 
   // DEBUG: Log data summary for each endpoint

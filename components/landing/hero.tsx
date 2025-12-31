@@ -3,6 +3,7 @@
 import { motion } from "framer-motion"
 import { ChevronDown, Zap, Radio, BarChart3 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { SEASON_YEAR } from "@/lib/season"
 
 export function Hero() {
   const scrollToCalendar = () => {
@@ -65,7 +66,7 @@ export function Hero() {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
           </span>
-          <span className="text-sm font-medium text-primary">2025 Season Ready</span>
+          <span className="text-sm font-medium text-primary">{SEASON_YEAR} Season Ready</span>
         </motion.div>
 
         {/* Main Title */}
@@ -94,7 +95,7 @@ export function Hero() {
             className="group relative overflow-hidden bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-6 text-lg font-semibold glow-cyan"
           >
             <span className="relative z-10 flex items-center gap-2">
-              Explore 2025 Season
+              Explore {SEASON_YEAR} Season
               <ChevronDown className="w-5 h-5 group-hover:translate-y-1 transition-transform" />
             </span>
           </Button>

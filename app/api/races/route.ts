@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { getMeetings, mapCircuitToKey } from "@/lib/openf1"
+import { SEASON_YEAR } from "@/lib/season"
 import type { Race } from "@/lib/race-data"
 
 // Cache the races for 1 hour (races don't change frequently)
@@ -45,7 +46,7 @@ export async function GET() {
   }
 
   // Fetch from OpenF1 API
-  const meetings = await getMeetings(2025)
+  const meetings = await getMeetings(SEASON_YEAR)
 
   if (!meetings || meetings.length === 0) {
     return NextResponse.json(

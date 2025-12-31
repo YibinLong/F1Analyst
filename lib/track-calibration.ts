@@ -25,6 +25,7 @@ export interface TrackCalibration {
     trackScale: number   // Overall scene scale multiplier
     trackDepth: number   // Extrusion depth for 3D track
     carHeight: number    // Height of cars above track surface
+    trackWidth: number   // Width of the track in 3D units
   }
 }
 
@@ -44,6 +45,7 @@ const defaultCalibration: TrackCalibration = {
     trackScale: 1.3,
     trackDepth: 0.3,
     carHeight: 0.15,
+    trackWidth: 2.4,  // Default track width in 3D units
   },
 }
 

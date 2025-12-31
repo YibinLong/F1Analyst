@@ -30,7 +30,18 @@ interface FlagPeriod {
   endLap: number
 }
 
-const speedOptions = [0.5, 1, 2, 4]
+// Speed options with labels
+// For slow speeds (minutes per lap), playbackSpeed = 1 / (seconds per lap)
+// e.g., 1 min/lap = 1/60 ≈ 0.0167
+const speedOptions = [
+  { value: 1/180, label: "3m" },   // 3 minutes per lap
+  { value: 1/120, label: "2m" },   // 2 minutes per lap
+  { value: 1/60, label: "1m" },    // 1 minute per lap
+  { value: 0.5, label: "0.5x" },   // 2 seconds per lap
+  { value: 1, label: "1x" },       // 1 second per lap
+  { value: 2, label: "2x" },       // 0.5 seconds per lap
+  { value: 4, label: "4x" },       // 0.25 seconds per lap
+]
 
 /**
  * Detects flag periods (SC, VSC, Red Flag) from race control events
@@ -246,21 +257,25 @@ export function Timeline({
           {/* Speed controls */}
           <div className="flex items-center gap-1">
             <span className="text-xs text-muted-foreground mr-2">Speed</span>
-            {speedOptions.map((speed) => (
-              <Button
-                key={speed}
-                variant={playbackSpeed === speed ? "default" : "ghost"}
-                size="sm"
-                onClick={() => onSpeedChange(speed)}
-                className={`h-7 px-2 font-mono text-xs ${
-                  playbackSpeed === speed
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {speed}x
-              </Button>
-            ))}
+            {speedOptions.map((option) => {
+              // Use a small epsilon for floating point comparison
+              const isSelected = Math.abs(playbackSpeed - option.value) < 0.0001
+              return (
+                <Button
+                  key={option.label}
+                  variant={isSelected ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => onSpeedChange(option.value)}
+                  className={`h-7 px-2 font-mono text-xs ${
+                    isSelected
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {option.label}
+                </Button>
+              )
+            })}
           </div>
 
           {/* Current lap display */}

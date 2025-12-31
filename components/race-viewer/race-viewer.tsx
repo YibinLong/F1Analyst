@@ -20,7 +20,7 @@ interface RaceViewerProps {
   drivers: Driver[]
   totalLaps: number
   positionsByLap: Record<number, Record<number, number>>
-  intervalsByLap: Record<number, Record<number, { interval: number | null; gapToLeader: number | null }>>
+  intervalsByLap: Record<number, Record<number, { interval: number | string | null; gapToLeader: number | string | null }>>
   locations: OpenF1Location[]
   laps: OpenF1Lap[]
   raceControl: OpenF1RaceControl[]
@@ -36,21 +36,45 @@ interface Standing {
 
 /**
  * Format interval value for display
+ * Handles both numeric values and string values (e.g., "+1 LAP")
  */
-function formatInterval(value: number | null): string | null {
+function formatInterval(value: number | string | null): string | null {
   if (value === null) return null
-  if (value < 0) return null // Negative intervals can occur with data issues
-  return `+${value.toFixed(3)}`
+
+  // If it's already a string (like "+1 LAP"), return as-is
+  if (typeof value === 'string') {
+    return value
+  }
+
+  // If it's a number, format it
+  if (typeof value === 'number') {
+    if (value < 0) return null // Negative intervals can occur with data issues
+    return `+${value.toFixed(3)}`
+  }
+
+  return null
 }
 
 /**
  * Format gap to leader for display
+ * Handles both numeric values and string values (e.g., "+1 LAP", "+2 LAPS")
  */
-function formatGapToLeader(value: number | null, position: number): string | null {
+function formatGapToLeader(value: number | string | null, position: number): string | null {
   if (position === 1) return null // Leader shows no gap
   if (value === null) return null
-  if (value < 0) return null
-  return `+${value.toFixed(3)}`
+
+  // If it's already a string (like "+1 LAP"), return as-is
+  if (typeof value === 'string') {
+    return value
+  }
+
+  // If it's a number, format it
+  if (typeof value === 'number') {
+    if (value < 0) return null
+    return `+${value.toFixed(3)}`
+  }
+
+  return null
 }
 
 export function RaceViewer({
