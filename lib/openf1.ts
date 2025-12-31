@@ -194,6 +194,53 @@ export async function getDrivers(sessionKey: number): Promise<OpenF1Driver[] | n
 }
 
 /**
+ * Sample location data to reduce volume while preserving important points
+ * OpenF1 returns ~3.7 Hz data, visualization only needs ~1 Hz
+ * @param locations - Raw location data
+ * @param sampleRate - Sample every Nth point (default: 4 for ~1 Hz from 3.7 Hz)
+ */
+function sampleLocationData(
+  locations: OpenF1Location[],
+  sampleRate: number = 4
+): OpenF1Location[] {
+  if (locations.length <= 2 || sampleRate <= 1) {
+    return locations
+  }
+
+  // Group by driver to maintain per-driver sampling
+  const byDriver = new Map<number, OpenF1Location[]>()
+  for (const loc of locations) {
+    if (!byDriver.has(loc.driver_number)) {
+      byDriver.set(loc.driver_number, [])
+    }
+    byDriver.get(loc.driver_number)!.push(loc)
+  }
+
+  const sampled: OpenF1Location[] = []
+
+  for (const [, driverLocs] of byDriver) {
+    if (driverLocs.length <= 2) {
+      // Keep all points if very few
+      sampled.push(...driverLocs)
+      continue
+    }
+
+    // Always keep first point
+    sampled.push(driverLocs[0])
+
+    // Sample middle points
+    for (let i = sampleRate; i < driverLocs.length - 1; i += sampleRate) {
+      sampled.push(driverLocs[i])
+    }
+
+    // Always keep last point
+    sampled.push(driverLocs[driverLocs.length - 1])
+  }
+
+  return sampled
+}
+
+/**
  * Get car locations for a session in a single time window
  * @internal Use getLocations instead which handles chunking
  */
@@ -201,7 +248,8 @@ async function fetchLocationChunk(
   sessionKey: number,
   dateStart: string,
   dateEnd: string,
-  driverNumber?: number
+  driverNumber?: number,
+  sampleRate: number = 4
 ): Promise<OpenF1Location[]> {
   const params: Record<string, string | number> = { session_key: sessionKey }
   if (driverNumber !== undefined) {
@@ -213,16 +261,20 @@ async function fetchLocationChunk(
   const data = await fetchOpenF1<OpenF1Location>("/location", params)
   if (!data) return []
 
-  return validateArray(data, OpenF1LocationSchema, "/location") as OpenF1Location[]
+  const validated = validateArray(data, OpenF1LocationSchema, "/location") as OpenF1Location[]
+
+  // Sample the data to reduce volume (~75% reduction with default rate of 4)
+  return sampleLocationData(validated, sampleRate)
 }
 
 /**
  * Get car locations for a session
  * @param sessionKey - The session key
- * @param options - Optional filters: driverNumber, dateStart, dateEnd
+ * @param options - Optional filters: driverNumber, dateStart, dateEnd, sampleRate
  *
  * IMPORTANT: The location endpoint returns data at ~3.7 Hz, which is MASSIVE.
  * This function fetches in 5-minute chunks to avoid "too much data" errors.
+ * Data is sampled at ~1 Hz by default (every 4th point) to reduce volume by ~75%.
  */
 export async function getLocations(
   sessionKey: number,
@@ -230,10 +282,11 @@ export async function getLocations(
     driverNumber?: number
     dateStart?: string
     dateEnd?: string
+    sampleRate?: number // Sample every Nth point (default: 4 for ~1 Hz)
   }
 ): Promise<OpenF1Location[] | null> {
-  const { driverNumber, dateStart, dateEnd } = options || {}
-  console.log(`[OpenF1 DEBUG] 📍 getLocations() called with session_key: ${sessionKey}, driverNumber: ${driverNumber ?? 'ALL'}, dateStart: ${dateStart ?? 'none'}, dateEnd: ${dateEnd ?? 'none'}`)
+  const { driverNumber, dateStart, dateEnd, sampleRate = 4 } = options || {}
+  console.log(`[OpenF1 DEBUG] 📍 getLocations() called with session_key: ${sessionKey}, driverNumber: ${driverNumber ?? 'ALL'}, dateStart: ${dateStart ?? 'none'}, dateEnd: ${dateEnd ?? 'none'}, sampleRate: ${sampleRate}`)
 
   // Without date range, we can't fetch location data (too much data error)
   if (!dateStart || !dateEnd) {
@@ -244,6 +297,14 @@ export async function getLocations(
   const start = new Date(dateStart)
   const end = new Date(dateEnd)
   const CHUNK_SIZE_MS = 5 * 60 * 1000 // 5 minutes in milliseconds
+
+  // If the session is in the future, the API won't have location data yet.
+  if (start.getTime() > Date.now()) {
+    console.warn(
+      `[OpenF1 DEBUG] ⚠️ Session ${sessionKey} starts in the future (${dateStart}); skipping location fetch`
+    )
+    return null
+  }
 
   // Calculate number of chunks needed
   const totalDuration = end.getTime() - start.getTime()
@@ -266,7 +327,8 @@ export async function getLocations(
           sessionKey,
           chunkStart.toISOString(),
           chunkEnd.toISOString(),
-          driverNumber
+          driverNumber,
+          sampleRate
         )
       )
     }
