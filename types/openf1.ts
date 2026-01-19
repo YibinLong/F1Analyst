@@ -150,6 +150,24 @@ export interface OpenF1RaceControl {
   meeting_key: number
 }
 
+/**
+ * Weather - Track weather conditions
+ * Endpoint: /weather
+ * Note: Data updated every minute
+ */
+export interface OpenF1Weather {
+  air_temperature: number
+  date: string
+  humidity: number
+  meeting_key: number
+  pressure: number
+  rainfall: number
+  session_key: number
+  track_temperature: number
+  wind_direction: number
+  wind_speed: number
+}
+
 // Frontend-friendly mapped types
 
 /**

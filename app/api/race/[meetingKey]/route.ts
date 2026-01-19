@@ -8,6 +8,7 @@ import {
   getLocations,
   getRaceControl,
   getPitStops,
+  getWeather,
   getMeetings,
   getMaxLapNumber,
   groupPositionsByLap,
@@ -77,7 +78,7 @@ export async function GET(request: Request, { params }: RouteParams) {
   console.log(`[API Route DEBUG] 📡 Fetching all race data for session_key: ${session.session_key}`)
   console.log(`[API Route DEBUG] 📅 Session time range: ${session.date_start} to ${session.date_end}`)
 
-  const [drivers, positions, intervals, laps, locations, raceControl, pitStops, meetings] =
+  const [drivers, positions, intervals, laps, locations, raceControl, pitStops, weather, meetings] =
     await Promise.all([
       getDrivers(session.session_key),
       getPositions(session.session_key),
@@ -90,6 +91,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       }),
       getRaceControl(session.session_key),
       getPitStops(session.session_key),
+      getWeather(session.session_key),
       getMeetings(SEASON_YEAR),
     ])
 
@@ -102,6 +104,7 @@ export async function GET(request: Request, { params }: RouteParams) {
   console.log(`  - locations:   ${locations?.length ?? 'null'} records  ← 🔍 THIS IS THE KEY ONE`)
   console.log(`  - raceControl: ${raceControl?.length ?? 'null'} records`)
   console.log(`  - pitStops:    ${pitStops?.length ?? 'null'} records`)
+  console.log(`  - weather:     ${weather?.length ?? 'null'} records`)
   console.log(`  - meetings:    ${meetings?.length ?? 'null'} records`)
 
   if (!locations || locations.length === 0) {
@@ -193,6 +196,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     locations: locations || [],
     raceControl: raceControl || [],
     pitStops: pitStops || [],
+    weather: weather || [],
     // Grouped data for efficient lookup during playback
     positionsByLap,
     intervalsByLap,

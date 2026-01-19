@@ -7,6 +7,7 @@ import type {
   OpenF1Location,
   OpenF1RaceControl,
   OpenF1PitStop,
+  OpenF1Weather,
 } from "@/types/openf1"
 
 // Essential lap data (reduced payload from API)
@@ -32,6 +33,7 @@ interface RaceViewerProps {
   laps: EssentialLap[]
   raceControl: OpenF1RaceControl[]
   pitStops: OpenF1PitStop[]
+  weather: OpenF1Weather[]
 }
 
 interface Standing {
@@ -94,6 +96,7 @@ export function RaceViewer({
   laps,
   raceControl,
   pitStops,
+  weather,
 }: RaceViewerProps) {
   const [currentLap, setCurrentLap] = useState(1)
   const [lapProgress, setLapProgress] = useState(0) // 0-1 progress within current lap
@@ -261,7 +264,7 @@ export function RaceViewer({
   return (
     <div className="h-screen flex flex-col">
       {/* Header */}
-      <RaceHeader race={race} currentLap={currentLap} totalLaps={totalLaps} raceControl={raceControl} />
+      <RaceHeader race={race} currentLap={currentLap} totalLaps={totalLaps} raceControl={raceControl} weather={weather} laps={laps} />
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">

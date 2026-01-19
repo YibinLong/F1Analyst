@@ -406,17 +406,17 @@
 
 ---
 
-### **Story 5.8: Add Weather Widget** ⬜
+### **Story 5.8: Add Weather Widget** ✅
 
 **Story:** As a user, I want to see track weather conditions so that I understand how weather affects the race.
 
-- ⬜ **Task 5.8.1:** Add `Weather` type to `/types/openf1.ts` (track_temperature, air_temperature, rainfall, humidity, wind_speed)
-- ⬜ **Task 5.8.2:** Add `getWeather(sessionKey: number)` function to `/lib/openf1.ts`
-- ⬜ **Task 5.8.3:** Fetch weather data in race data loader
-- ⬜ **Task 5.8.4:** Create WeatherWidget component with temperature and condition icons
-- ⬜ **Task 5.8.5:** Display widget in race header area (near race title)
-- ⬜ **Task 5.8.6:** Update weather display as user scrubs timeline (find closest weather data point)
-- ⬜ **Task 5.8.7:** Handle missing weather data gracefully (hide widget or show "N/A")
+- ✅ **Task 5.8.1:** Add `Weather` type to `/types/openf1.ts` (track_temperature, air_temperature, rainfall, humidity, wind_speed)
+- ✅ **Task 5.8.2:** Add `getWeather(sessionKey: number)` function to `/lib/openf1.ts`
+- ✅ **Task 5.8.3:** Fetch weather data in race data loader
+- ✅ **Task 5.8.4:** Create WeatherWidget component with temperature and condition icons
+- ✅ **Task 5.8.5:** Display widget in race header area (near race title)
+- ✅ **Task 5.8.6:** Update weather display as user scrubs timeline (find closest weather data point)
+- ✅ **Task 5.8.7:** Handle missing weather data gracefully (hide widget or show "N/A")
 
 **Acceptance:** Race header displays current track conditions that update with timeline position.
 
@@ -526,7 +526,7 @@ Story 1.4 → Story 5.7 (position data required to detect overtakes)
 | `/components/race-viewer/DriverDetailsPanel.tsx` | 5.6 | Selected driver info panel | ✅ Created |
 | `/components/race-viewer/KeyMomentChip.tsx` | 5.7 | Clickable overtake/incident chip | ✅ Created |
 | `/lib/race-moments.ts` | 5.7 | Utility to detect overtakes from position data | ✅ Created |
-| `/components/race-viewer/WeatherWidget.tsx` | 5.8 | Track conditions display widget | ⬜ Not Started |
+| `/components/race-viewer/WeatherWidget.tsx` | 5.8 | Track conditions display widget | ✅ Created |
 | `/components/race-viewer/TeamRadioPanel.tsx` | 5.9 | Team radio clips list and player | ⬜ Not Started |
 
 ---
@@ -545,8 +545,8 @@ Story 1.4 → Story 5.7 (position data required to detect overtakes)
 | `/components/race-viewer/track-visualization.tsx` | 4.1-4.2 | Add error boundary and location unavailable overlay | ✅ Updated |
 | `/components/race-viewer/leaderboard.tsx` | 4.2 | Add missing data handling | ✅ Updated |
 | `/components/race-viewer/track-visualization.tsx` | 5.4-5.5 | Integrated Track3D and F1Car, added rotation tracking | ✅ Updated |
-| `/types/openf1.ts` | 5.8-5.9 | Add Weather and TeamRadio types | ⬜ Not Started |
-| `/lib/openf1.ts` | 5.8-5.9 | Add getWeather() and getTeamRadio() functions | ⬜ Not Started |
+| `/types/openf1.ts` | 5.8-5.9 | Add Weather and TeamRadio types | 🟦 Weather added, TeamRadio pending |
+| `/lib/openf1.ts` | 5.8-5.9 | Add getWeather() and getTeamRadio() functions | 🟦 getWeather() added, getTeamRadio() pending |
 | `/components/race-viewer/Timeline.tsx` | 5.7 | Add KeyMomentChip positioning above timeline | ✅ Updated |
 | `/components/race-viewer/Leaderboard.tsx` | 5.6 | Add selected driver highlight styling | ✅ Updated |
-| Race header component | 5.8 | Add WeatherWidget display | ⬜ Not Started |
+| Race header component | 5.8 | Add WeatherWidget display | ✅ Updated |

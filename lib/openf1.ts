@@ -11,6 +11,7 @@ import type {
   OpenF1Lap,
   OpenF1PitStop,
   OpenF1RaceControl,
+  OpenF1Weather,
 } from "@/types/openf1"
 import {
   OpenF1MeetingSchema,
@@ -22,6 +23,7 @@ import {
   OpenF1LapSchema,
   OpenF1PitStopSchema,
   OpenF1RaceControlSchema,
+  OpenF1WeatherSchema,
   validateArray,
 } from "@/lib/openf1-schemas"
 import type { z } from "zod"
@@ -409,6 +411,16 @@ export async function getRaceControl(sessionKey: number): Promise<OpenF1RaceCont
   const data = await fetchOpenF1<OpenF1RaceControl>("/race_control", { session_key: sessionKey })
   if (!data) return null
   return validateArray(data, OpenF1RaceControlSchema, "/race_control") as OpenF1RaceControl[]
+}
+
+/**
+ * Get weather data for a session
+ * @param sessionKey - The session key
+ */
+export async function getWeather(sessionKey: number): Promise<OpenF1Weather[] | null> {
+  const data = await fetchOpenF1<OpenF1Weather>("/weather", { session_key: sessionKey })
+  if (!data) return null
+  return validateArray(data, OpenF1WeatherSchema, "/weather") as OpenF1Weather[]
 }
 
 // Utility functions for data processing
