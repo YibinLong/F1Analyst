@@ -449,7 +449,7 @@
 
 **Story:** As a developer, I want to verify all features work correctly before deployment.
 
-- ⬜ **Task 6.1.1:** Test landing page with real 2025 race data
+- ✅ **Task 6.1.1:** Test landing page with real 2025 race data
 - ⬜ **Task 6.1.2:** Test race viewer with multiple different races
 - ⬜ **Task 6.1.3:** Test timeline scrubbing updates all components correctly
 - ⬜ **Task 6.1.4:** Test AI chat with various race-related questions
