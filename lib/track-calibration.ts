@@ -25,6 +25,8 @@ export interface TrackCalibration {
     trackScale: number   // Overall scene scale multiplier
     trackDepth: number   // Extrusion depth for 3D track
     carHeight: number    // Height of cars above track surface
+    trackWidth: number   // Width of the track in 3D units
+    carScale?: number    // Optional car scale multiplier (default: 1.0)
   }
 }
 
@@ -44,7 +46,44 @@ const defaultCalibration: TrackCalibration = {
     trackScale: 1.3,
     trackDepth: 0.3,
     carHeight: 0.15,
+    trackWidth: 2.4,  // Default track width in 3D units
+    carScale: 1.0,    // Default car scale (1.0 = standard size)
   },
+}
+
+/**
+ * Calculate the effective car scale for a track
+ * This ensures cars are sized proportionally to fit within the track width
+ *
+ * Base car dimensions (at scale=1):
+ * - Length: 0.35 * 3 = 1.05 units
+ * - Width: 0.14 * 3 = 0.42 units
+ *
+ * For a 2-wide grid formation, we need:
+ * - 2 cars side by side with some spacing
+ * - Total width ≈ 2 * carWidth + gap ≤ trackWidth
+ *
+ * @param trackId - Circuit identifier
+ * @returns Car scale factor (applies to the base 3x scale)
+ */
+export function getCarScale(trackId: string): number {
+  const calibration = getTrackCalibration(trackId)
+  const baseCarWidth = 0.42  // Base car width at scale=1 (0.14 * 3)
+  const trackWidth = calibration.render.trackWidth
+
+  // Calculate scale to fit 2 cars with comfortable margins
+  // Target: 2 cars + gap should take ~70% of track width for safety margin
+  const targetTwoCarWidth = trackWidth * 0.7
+  const idealScale = targetTwoCarWidth / (2 * baseCarWidth)
+
+  // Apply per-track override if specified, otherwise use calculated scale
+  const configuredScale = calibration.render.carScale ?? 1.0
+
+  // Use the minimum of configured scale and ideal scale to prevent overflow
+  // But also cap at a reasonable maximum (1.2) and minimum (0.5) for visual appeal
+  const finalScale = Math.max(0.5, Math.min(1.2, Math.min(configuredScale, idealScale)))
+
+  return finalScale
 }
 
 /**

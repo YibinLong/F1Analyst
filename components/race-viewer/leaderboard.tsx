@@ -13,9 +13,11 @@ interface Standing {
 
 interface LeaderboardProps {
   standings: Standing[]
+  selectedDriverNumber?: number | null
+  onDriverSelect?: (driverNumber: number | null) => void
 }
 
-export function Leaderboard({ standings }: LeaderboardProps) {
+export function Leaderboard({ standings, selectedDriverNumber, onDriverSelect }: LeaderboardProps) {
   // Handle empty standings gracefully
   const hasData = standings && standings.length > 0
 
@@ -34,48 +36,65 @@ export function Leaderboard({ standings }: LeaderboardProps) {
           </div>
         ) : (
         <div className="p-2 space-y-1">
-          {standings.map((standing, index) => (
-            <motion.div
-              key={standing.driver.number}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.02 }}
-              className="group flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted/50 transition-colors"
-            >
-              {/* Position */}
-              <span
-                className={`w-6 text-center font-mono font-bold text-sm ${
-                  standing.position <= 3 ? "text-primary" : "text-muted-foreground"
+          {standings.map((standing, index) => {
+            const isSelected = selectedDriverNumber === standing.driver.number
+            return (
+              <motion.div
+                key={standing.driver.number}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.02 }}
+                onClick={() => onDriverSelect?.(isSelected ? null : standing.driver.number)}
+                className={`group flex items-center gap-2 px-3 py-2 rounded-lg transition-all cursor-pointer ${
+                  isSelected
+                    ? "bg-primary/20 ring-1 ring-primary/50"
+                    : "hover:bg-muted/50"
                 }`}
+                style={isSelected ? {
+                  boxShadow: `0 0 12px ${standing.driver.teamColor}40`,
+                  borderLeft: `3px solid ${standing.driver.teamColor}`
+                } : undefined}
               >
-                {standing.position}
-              </span>
+                {/* Position */}
+                <span
+                  className={`w-6 text-center font-mono font-bold text-sm ${
+                    isSelected ? "text-primary" : standing.position <= 3 ? "text-primary" : "text-muted-foreground"
+                  }`}
+                >
+                  {standing.position}
+                </span>
 
-              {/* Team color bar */}
-              <div className="w-1 h-8 rounded-full" style={{ backgroundColor: standing.driver.teamColor }} />
+                {/* Team color bar */}
+                <div
+                  className={`w-1 h-8 rounded-full transition-all ${isSelected ? "w-1.5" : ""}`}
+                  style={{ backgroundColor: standing.driver.teamColor }}
+                />
 
-              {/* Driver info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono font-bold text-sm text-foreground">{standing.driver.code}</span>
-                  <span className="text-xs text-muted-foreground truncate hidden sm:inline">
-                    {standing.driver.firstName.charAt(0)}. {standing.driver.lastName}
-                  </span>
+                {/* Driver info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className={`font-mono font-bold text-sm ${isSelected ? "text-primary" : "text-foreground"}`}>
+                      {standing.driver.code}
+                    </span>
+                    <span className="text-xs text-muted-foreground truncate hidden sm:inline">
+                      {standing.driver.firstName.charAt(0)}. {standing.driver.lastName}
+                    </span>
+                  </div>
                 </div>
-              </div>
 
-              {/* Interval */}
-              <div className="text-right">
-                {standing.position === 1 ? (
-                  <span className="text-xs font-mono font-bold text-primary">LEADER</span>
-                ) : (
-                  <span className="text-xs font-mono text-muted-foreground">
-                    {standing.interval || "---"}
-                  </span>
-                )}
-              </div>
-            </motion.div>
-          ))}
+                {/* Interval */}
+                <div className="text-right">
+                  {standing.position === 1 ? (
+                    <span className="text-xs font-mono font-bold text-primary">LEADER</span>
+                  ) : (
+                    <span className={`text-xs font-mono ${isSelected ? "text-foreground" : "text-muted-foreground"}`}>
+                      {standing.interval || "---"}
+                    </span>
+                  )}
+                </div>
+              </motion.div>
+            )
+          })}
         </div>
         )}
       </div>

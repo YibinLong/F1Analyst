@@ -5,6 +5,7 @@ import { motion } from "framer-motion"
 import { RaceCard } from "./race-card"
 import type { Race } from "@/lib/race-data"
 import { Loader2 } from "lucide-react"
+import { SEASON_YEAR } from "@/lib/season"
 
 export function RaceGrid() {
   const [races, setRaces] = useState<Race[]>([])
@@ -48,7 +49,7 @@ export function RaceGrid() {
           className="text-center mb-16"
         >
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            <span className="text-primary">2025</span> Season Calendar
+            <span className="text-primary">{SEASON_YEAR}</span> Season Calendar
           </h2>
           <p className="text-muted-foreground max-w-lg mx-auto">
             Select a Grand Prix to dive into the race analysis with our AI-powered replay system

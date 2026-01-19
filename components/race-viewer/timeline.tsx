@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import type { OpenF1PitStop, OpenF1RaceControl } from "@/types/openf1"
 import type { Driver } from "@/lib/f1-teams"
+import { getKeyMoments, type KeyMoment } from "@/lib/race-moments"
+import { KeyMomentsRow } from "./KeyMomentChip"
 
 interface TimelineProps {
   currentLap: number
@@ -21,6 +23,8 @@ interface TimelineProps {
   pitStops?: OpenF1PitStop[]
   raceControl?: OpenF1RaceControl[]
   drivers?: Driver[]
+  // Position data for key moments detection
+  positionsByLap?: Record<number, Record<number, number>>
 }
 
 // Represents a flag period (SC, VSC, or Red Flag)
@@ -30,7 +34,18 @@ interface FlagPeriod {
   endLap: number
 }
 
-const speedOptions = [0.5, 1, 2, 4]
+// Speed options with labels
+// For slow speeds (minutes per lap), playbackSpeed = 1 / (seconds per lap)
+// e.g., 1 min/lap = 1/60 ≈ 0.0167
+const speedOptions = [
+  { value: 1/180, label: "3m" },   // 3 minutes per lap
+  { value: 1/120, label: "2m" },   // 2 minutes per lap
+  { value: 1/60, label: "1m" },    // 1 minute per lap
+  { value: 0.5, label: "0.5x" },   // 2 seconds per lap
+  { value: 1, label: "1x" },       // 1 second per lap
+  { value: 2, label: "2x" },       // 0.5 seconds per lap
+  { value: 4, label: "4x" },       // 0.25 seconds per lap
+]
 
 /**
  * Detects flag periods (SC, VSC, Red Flag) from race control events
@@ -103,6 +118,7 @@ export function Timeline({
   pitStops,
   raceControl,
   drivers,
+  positionsByLap,
 }: TimelineProps) {
   const progress = (currentLap / totalLaps) * 100
 
@@ -121,6 +137,17 @@ export function Timeline({
     [raceControl, totalLaps]
   )
 
+  // Detect key moments (overtakes) from position data
+  const keyMoments = useMemo<KeyMoment[]>(() => {
+    if (!positionsByLap || Object.keys(positionsByLap).length === 0) {
+      return []
+    }
+    return getKeyMoments(positionsByLap, pitStops || [], {
+      maxMoments: 12,
+      topNDrivers: 10,
+    })
+  }, [positionsByLap, pitStops])
+
   // Position calculation: lap number to percentage
   const lapToPercent = (lap: number) => {
     if (totalLaps <= 1) return 0
@@ -128,8 +155,24 @@ export function Timeline({
   }
 
   return (
-    <div className="h-24 border-t border-border/50 glass-panel px-4 py-3">
-      <div className="max-w-6xl mx-auto h-full flex flex-col gap-3">
+    <div className="border-t border-border/50 glass-panel px-4 py-3">
+      <div className="max-w-6xl mx-auto flex flex-col gap-2">
+        {/* Key moments chips row - above timeline */}
+        {keyMoments.length > 0 && (
+          <div className="flex items-center gap-4">
+            <span className="text-xs font-mono text-muted-foreground w-12"></span>
+            <div className="flex-1 relative">
+              <KeyMomentsRow
+                moments={keyMoments}
+                drivers={drivers || []}
+                totalLaps={totalLaps}
+                onLapChange={onLapChange}
+              />
+            </div>
+            <span className="text-xs font-mono text-muted-foreground w-16 text-right"></span>
+          </div>
+        )}
+
         {/* Timeline scrubber */}
         <div className="flex items-center gap-4">
           <span className="text-xs font-mono text-muted-foreground w-12">LAP 1</span>
@@ -246,21 +289,25 @@ export function Timeline({
           {/* Speed controls */}
           <div className="flex items-center gap-1">
             <span className="text-xs text-muted-foreground mr-2">Speed</span>
-            {speedOptions.map((speed) => (
-              <Button
-                key={speed}
-                variant={playbackSpeed === speed ? "default" : "ghost"}
-                size="sm"
-                onClick={() => onSpeedChange(speed)}
-                className={`h-7 px-2 font-mono text-xs ${
-                  playbackSpeed === speed
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {speed}x
-              </Button>
-            ))}
+            {speedOptions.map((option) => {
+              // Use a small epsilon for floating point comparison
+              const isSelected = Math.abs(playbackSpeed - option.value) < 0.0001
+              return (
+                <Button
+                  key={option.label}
+                  variant={isSelected ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => onSpeedChange(option.value)}
+                  className={`h-7 px-2 font-mono text-xs ${
+                    isSelected
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {option.label}
+                </Button>
+              )
+            })}
           </div>
 
           {/* Current lap display */}
