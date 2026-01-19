@@ -20,6 +20,7 @@ import {
   getAnimationTimestamp,
   getRaceTimeRange,
   getInterpolatedPosition,
+  getInterpolatedPositionWithRotation,
   type TrackBounds,
 } from "@/lib/track-utils"
 import {
@@ -181,7 +182,7 @@ function Car({
 /**
  * AnimatedCar - Uses useFrame for smooth 60fps position interpolation
  * Directly mutates position via refs instead of React state for performance
- * Now uses the new F1Car component with rotation tracking
+ * Now uses the new F1Car component with pre-calculated rotation from track trajectory
  */
 function AnimatedCar({
   driverNumber,
@@ -210,25 +211,24 @@ function AnimatedCar({
 }) {
   const groupRef = useRef<THREE.Group>(null)
   const targetPosition = useRef({ x: 0, y: 0.45, z: 0 })
-  const previousPosition = useRef({ x: 0, y: 0.45, z: 0 })
+  const targetRotation = useRef(0)
   const currentRotation = useRef(0)
 
-  // Calculate target position based on current lap and progress
+  // Calculate target position AND rotation based on current lap and progress
+  // Rotation is calculated from the track trajectory (before -> after points)
+  // which provides stable orientation during animation
   useEffect(() => {
     const timestamp = getAnimationTimestamp(currentLap, lapProgress, raceTimeRange, totalLaps)
-    const pos = getInterpolatedPosition(driverLocations, timestamp, trackBounds, trackId)
-    if (pos) {
-      targetPosition.current = pos
+    const result = getInterpolatedPositionWithRotation(driverLocations, timestamp, trackBounds, trackId)
+    if (result) {
+      targetPosition.current = { x: result.x, y: result.y, z: result.z }
+      targetRotation.current = result.rotation
     }
   }, [currentLap, lapProgress, driverLocations, trackBounds, raceTimeRange, totalLaps, trackId])
 
   // Smooth interpolation every frame using useFrame
   useFrame(() => {
     if (!groupRef.current) return
-
-    // Store previous position for rotation calculation
-    const prevX = groupRef.current.position.x
-    const prevZ = groupRef.current.position.z
 
     // Smoothly lerp to target position (higher factor = faster response)
     const lerpFactor = 0.12
@@ -242,25 +242,15 @@ function AnimatedCar({
       lerpFactor
     )
 
-    // Calculate rotation based on movement direction
-    const dx = groupRef.current.position.x - prevX
-    const dz = groupRef.current.position.z - prevZ
-    const distance = Math.sqrt(dx * dx + dz * dz)
+    // Smooth rotation interpolation with wrap-around handling
+    // Uses pre-calculated target rotation from track trajectory
+    let rotationDiff = targetRotation.current - currentRotation.current
+    if (rotationDiff > Math.PI) rotationDiff -= Math.PI * 2
+    if (rotationDiff < -Math.PI) rotationDiff += Math.PI * 2
 
-    if (distance > 0.0005) {
-      // Calculate target rotation from movement direction
-      // F1Car model faces +X, so subtract PI/2 to align with movement direction
-      const targetRotation = Math.atan2(dx, dz) - Math.PI / 2
-
-      // Smooth rotation with wrap-around handling
-      let rotationDiff = targetRotation - currentRotation.current
-      if (rotationDiff > Math.PI) rotationDiff -= Math.PI * 2
-      if (rotationDiff < -Math.PI) rotationDiff += Math.PI * 2
-
-      // Increased smoothing factor for faster response (was 0.08)
-      currentRotation.current += rotationDiff * 0.15
-      groupRef.current.rotation.y = currentRotation.current
-    }
+    // Smooth rotation interpolation
+    currentRotation.current += rotationDiff * 0.1
+    groupRef.current.rotation.y = currentRotation.current
   })
 
   return (

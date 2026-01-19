@@ -264,9 +264,13 @@ function MotionTrail({ teamColor }: { teamColor: string }) {
  *
  * Wraps F1Car with smooth position and rotation interpolation.
  * Uses useFrame for 60fps updates.
+ *
+ * Rotation can be provided via targetRotation prop (calculated from track trajectory)
+ * which provides stable orientation during animation.
  */
 interface AnimatedF1CarProps {
   targetPosition: { x: number; y: number; z: number }
+  targetRotation?: number // Pre-calculated rotation from track trajectory (optional)
   teamColor: string
   driverNumber: number
   isSelected?: boolean
@@ -275,23 +279,25 @@ interface AnimatedF1CarProps {
 
 // Reusable vectors to avoid garbage collection
 const tempVec = new THREE.Vector3()
-const prevPosVec = new THREE.Vector3()
 
 export function AnimatedF1Car({
   targetPosition,
+  targetRotation: targetRotationProp,
   teamColor,
   driverNumber,
   isSelected = false,
   onClick,
 }: AnimatedF1CarProps) {
   const groupRef = useRef<THREE.Group>(null)
-  const previousPosition = useRef({ x: targetPosition.x, y: targetPosition.y, z: targetPosition.z })
   const currentRotation = useRef(0)
+  const lastTargetRotation = useRef(targetRotationProp ?? 0)
 
-  // Update target when it changes
+  // Update last target rotation when prop changes
   useEffect(() => {
-    previousPosition.current = { ...targetPosition }
-  }, []) // Only on mount
+    if (targetRotationProp !== undefined) {
+      lastTargetRotation.current = targetRotationProp
+    }
+  }, [targetRotationProp])
 
   useFrame(() => {
     if (!groupRef.current) return
@@ -303,31 +309,19 @@ export function AnimatedF1Car({
       lerpFactor
     )
 
-    // Calculate rotation based on movement direction
-    const pos = groupRef.current.position
-    const dx = pos.x - previousPosition.current.x
-    const dz = pos.z - previousPosition.current.z
-    const distance = Math.sqrt(dx * dx + dz * dz)
+    // Use pre-calculated target rotation if available
+    const targetRot = lastTargetRotation.current
 
-    if (distance > 0.001) {
-      // Calculate target rotation (atan2 gives angle from movement direction)
-      // F1Car model faces +X, so subtract PI/2 to align with movement direction
-      const targetRotation = Math.atan2(dx, dz) - Math.PI / 2
+    // Smooth rotation interpolation with wrap-around handling
+    let rotationDiff = targetRot - currentRotation.current
 
-      // Smooth rotation interpolation with wrap-around handling
-      let rotationDiff = targetRotation - currentRotation.current
+    // Handle rotation wrap-around (-PI to PI)
+    if (rotationDiff > Math.PI) rotationDiff -= Math.PI * 2
+    if (rotationDiff < -Math.PI) rotationDiff += Math.PI * 2
 
-      // Handle rotation wrap-around (-PI to PI)
-      if (rotationDiff > Math.PI) rotationDiff -= Math.PI * 2
-      if (rotationDiff < -Math.PI) rotationDiff += Math.PI * 2
-
-      // Increased smoothing factor for faster response (was 0.1)
-      currentRotation.current += rotationDiff * 0.15
-      groupRef.current.rotation.y = currentRotation.current
-    }
-
-    // Update previous position
-    previousPosition.current = { x: pos.x, y: pos.y, z: pos.z }
+    // Smooth rotation interpolation
+    currentRotation.current += rotationDiff * 0.1
+    groupRef.current.rotation.y = currentRotation.current
   })
 
   return (
