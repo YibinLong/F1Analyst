@@ -12,6 +12,7 @@ import type {
   OpenF1RaceControl,
   OpenF1PitStop,
   OpenF1Weather,
+  OpenF1TeamRadio,
 } from "@/types/openf1"
 import { Loader2, AlertCircle, RefreshCw } from "lucide-react"
 
@@ -43,6 +44,7 @@ interface RaceData {
   raceControl: OpenF1RaceControl[]
   pitStops: OpenF1PitStop[]
   weather: OpenF1Weather[]
+  teamRadio: OpenF1TeamRadio[]
   positionsByLap: Record<number, Record<number, number>>
   intervalsByLap: Record<number, Record<number, { interval: number | string | null; gapToLeader: number | string | null }>>
 }
@@ -90,6 +92,7 @@ export function RaceViewerWrapper({ meetingKey, initialRaceInfo }: RaceViewerWra
         console.log(`  - raceControl: ${data.raceControl?.length ?? 'null'} records`)
         console.log(`  - pitStops: ${data.pitStops?.length ?? 'null'} records`)
         console.log(`  - weather: ${data.weather?.length ?? 'null'} records`)
+        console.log(`  - teamRadio: ${data.teamRadio?.length ?? 'null'} records`)
         console.log(`  - positionsByLap: ${Object.keys(data.positionsByLap || {}).length} laps (pre-grouped)`)
         console.log(`  - intervalsByLap: ${Object.keys(data.intervalsByLap || {}).length} laps (pre-grouped)`)
 
@@ -211,6 +214,7 @@ export function RaceViewerWrapper({ meetingKey, initialRaceInfo }: RaceViewerWra
             raceControl={raceData.raceControl}
             pitStops={raceData.pitStops}
             weather={raceData.weather}
+            teamRadio={raceData.teamRadio}
           />
         </motion.div>
       ) : (

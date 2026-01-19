@@ -168,6 +168,18 @@ export const OpenF1WeatherSchema = z.object({
   wind_speed: z.number(),
 })
 
+/**
+ * TeamRadio - Team radio communications
+ * Endpoint: /team_radio
+ */
+export const OpenF1TeamRadioSchema = z.object({
+  meeting_key: z.number().int().positive(),
+  session_key: z.number().int().positive(),
+  driver_number: z.number().int().positive(),
+  date: z.string(),
+  recording_url: z.string().url(),
+})
+
 // Array validators for bulk responses
 export const OpenF1MeetingsArraySchema = z.array(OpenF1MeetingSchema)
 export const OpenF1SessionsArraySchema = z.array(OpenF1SessionSchema)
@@ -179,6 +191,7 @@ export const OpenF1LapsArraySchema = z.array(OpenF1LapSchema)
 export const OpenF1PitStopsArraySchema = z.array(OpenF1PitStopSchema)
 export const OpenF1RaceControlArraySchema = z.array(OpenF1RaceControlSchema)
 export const OpenF1WeatherArraySchema = z.array(OpenF1WeatherSchema)
+export const OpenF1TeamRadioArraySchema = z.array(OpenF1TeamRadioSchema)
 
 // Type exports inferred from schemas (optional - can use existing types)
 export type ValidatedMeeting = z.infer<typeof OpenF1MeetingSchema>
@@ -191,6 +204,7 @@ export type ValidatedLap = z.infer<typeof OpenF1LapSchema>
 export type ValidatedPitStop = z.infer<typeof OpenF1PitStopSchema>
 export type ValidatedRaceControl = z.infer<typeof OpenF1RaceControlSchema>
 export type ValidatedWeather = z.infer<typeof OpenF1WeatherSchema>
+export type ValidatedTeamRadio = z.infer<typeof OpenF1TeamRadioSchema>
 
 /**
  * Validate an array of items against a schema, filtering out invalid items

@@ -12,6 +12,7 @@ import type {
   OpenF1PitStop,
   OpenF1RaceControl,
   OpenF1Weather,
+  OpenF1TeamRadio,
 } from "@/types/openf1"
 import {
   OpenF1MeetingSchema,
@@ -24,6 +25,7 @@ import {
   OpenF1PitStopSchema,
   OpenF1RaceControlSchema,
   OpenF1WeatherSchema,
+  OpenF1TeamRadioSchema,
   validateArray,
 } from "@/lib/openf1-schemas"
 import type { z } from "zod"
@@ -421,6 +423,24 @@ export async function getWeather(sessionKey: number): Promise<OpenF1Weather[] | 
   const data = await fetchOpenF1<OpenF1Weather>("/weather", { session_key: sessionKey })
   if (!data) return null
   return validateArray(data, OpenF1WeatherSchema, "/weather") as OpenF1Weather[]
+}
+
+/**
+ * Get team radio communications for a session
+ * @param sessionKey - The session key
+ * @param driverNumber - Optional driver number to filter by
+ */
+export async function getTeamRadio(
+  sessionKey: number,
+  driverNumber?: number
+): Promise<OpenF1TeamRadio[] | null> {
+  const params: Record<string, string | number> = { session_key: sessionKey }
+  if (driverNumber !== undefined) {
+    params.driver_number = driverNumber
+  }
+  const data = await fetchOpenF1<OpenF1TeamRadio>("/team_radio", params)
+  if (!data) return null
+  return validateArray(data, OpenF1TeamRadioSchema, "/team_radio") as OpenF1TeamRadio[]
 }
 
 // Utility functions for data processing

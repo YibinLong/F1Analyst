@@ -2,7 +2,7 @@
 
 **Status Legend:** ⬜ Not Started | 🟦 In Progress | ✅ Done | ❌ Blocked
 
-**Current State:** UI is 90% complete (built by v0). OpenF1 API integration is complete (EPIC 1). AI chat integration is complete (EPIC 2). Data caching & performance is complete (EPIC 3). Error handling & reliability is complete (EPIC 4). Polish stories 5.1-5.5 are complete (pit stops, safety car indicators, loading experience, circuit-accurate track SVGs, F1 car models with rotation tracking). Remaining work is visual polish (EPIC 5: Stories 5.6-5.9) and testing/deployment (EPIC 6).
+**Current State:** UI is 90% complete (built by v0). OpenF1 API integration is complete (EPIC 1). AI chat integration is complete (EPIC 2). Data caching & performance is complete (EPIC 3). Error handling & reliability is complete (EPIC 4). Polish & UX improvements complete (EPIC 5: pit stops, safety car indicators, loading experience, circuit-accurate track SVGs, F1 car models with rotation tracking, car selection & driver highlight, key moments timeline chips, weather widget, team radio playback). Remaining work is testing/deployment (EPIC 6).
 
 ---
 
@@ -291,7 +291,7 @@
 
 ---
 
-## **EPIC 5: POLISH & UX IMPROVEMENTS** 🟦
+## **EPIC 5: POLISH & UX IMPROVEMENTS** ✅
 
 ### **Story 5.1: Add Pit Stop Markers to Timeline** ✅
 
@@ -424,18 +424,18 @@
 
 ---
 
-### **Story 5.9: Add Team Radio Playback** ⬜
+### **Story 5.9: Add Team Radio Playback** ✅
 
 **Story:** As a user, I want to access team radio snippets so that I can hear driver communications during key moments.
 
-- ⬜ **Task 5.9.1:** Investigate if OpenF1 API provides team radio data (check `/team_radio` endpoint)
-- ⬜ **Task 5.9.2:** If available: Add `TeamRadio` type to `/types/openf1.ts`
-- ⬜ **Task 5.9.3:** If available: Add `getTeamRadio(sessionKey: number)` function to `/lib/openf1.ts`
-- ⬜ **Task 5.9.4:** Create TeamRadioPanel component with list of available clips
-- ⬜ **Task 5.9.5:** Create audio player with play/pause controls
-- ⬜ **Task 5.9.6:** Filter clips to show only those near current timeline position
-- ⬜ **Task 5.9.7:** Display driver name and lap number for each clip
-- ⬜ **Task 5.9.8:** Handle case where team radio is not available → show "Radio unavailable for this session"
+- ✅ **Task 5.9.1:** Investigate if OpenF1 API provides team radio data (check `/team_radio` endpoint)
+- ✅ **Task 5.9.2:** If available: Add `TeamRadio` type to `/types/openf1.ts`
+- ✅ **Task 5.9.3:** If available: Add `getTeamRadio(sessionKey: number)` function to `/lib/openf1.ts`
+- ✅ **Task 5.9.4:** Create TeamRadioPanel component with list of available clips
+- ✅ **Task 5.9.5:** Create audio player with play/pause controls
+- ✅ **Task 5.9.6:** Filter clips to show only those near current timeline position
+- ✅ **Task 5.9.7:** Display driver name and lap number for each clip
+- ✅ **Task 5.9.8:** Handle case where team radio is not available → show "Radio unavailable for this session"
 
 **Acceptance:** Users can play team radio clips relevant to current race moment; graceful fallback if unavailable.
 
@@ -527,7 +527,7 @@ Story 1.4 → Story 5.7 (position data required to detect overtakes)
 | `/components/race-viewer/KeyMomentChip.tsx` | 5.7 | Clickable overtake/incident chip | ✅ Created |
 | `/lib/race-moments.ts` | 5.7 | Utility to detect overtakes from position data | ✅ Created |
 | `/components/race-viewer/WeatherWidget.tsx` | 5.8 | Track conditions display widget | ✅ Created |
-| `/components/race-viewer/TeamRadioPanel.tsx` | 5.9 | Team radio clips list and player | ⬜ Not Started |
+| `/components/race-viewer/TeamRadioPanel.tsx` | 5.9 | Team radio clips list and player | ✅ Created |
 
 ---
 
@@ -545,8 +545,8 @@ Story 1.4 → Story 5.7 (position data required to detect overtakes)
 | `/components/race-viewer/track-visualization.tsx` | 4.1-4.2 | Add error boundary and location unavailable overlay | ✅ Updated |
 | `/components/race-viewer/leaderboard.tsx` | 4.2 | Add missing data handling | ✅ Updated |
 | `/components/race-viewer/track-visualization.tsx` | 5.4-5.5 | Integrated Track3D and F1Car, added rotation tracking | ✅ Updated |
-| `/types/openf1.ts` | 5.8-5.9 | Add Weather and TeamRadio types | 🟦 Weather added, TeamRadio pending |
-| `/lib/openf1.ts` | 5.8-5.9 | Add getWeather() and getTeamRadio() functions | 🟦 getWeather() added, getTeamRadio() pending |
+| `/types/openf1.ts` | 5.8-5.9 | Add Weather and TeamRadio types | ✅ Updated |
+| `/lib/openf1.ts` | 5.8-5.9 | Add getWeather() and getTeamRadio() functions | ✅ Updated |
 | `/components/race-viewer/Timeline.tsx` | 5.7 | Add KeyMomentChip positioning above timeline | ✅ Updated |
 | `/components/race-viewer/Leaderboard.tsx` | 5.6 | Add selected driver highlight styling | ✅ Updated |
 | Race header component | 5.8 | Add WeatherWidget display | ✅ Updated |

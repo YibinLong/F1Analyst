@@ -8,6 +8,7 @@ import type {
   OpenF1RaceControl,
   OpenF1PitStop,
   OpenF1Weather,
+  OpenF1TeamRadio,
 } from "@/types/openf1"
 
 // Essential lap data (reduced payload from API)
@@ -22,6 +23,7 @@ import { Leaderboard } from "./leaderboard"
 import { Timeline } from "./timeline"
 import { ChatPanel } from "../chat/chat-panel"
 import { DriverDetailsPanel } from "./DriverDetailsPanel"
+import { TeamRadioPanel } from "./TeamRadioPanel"
 
 interface RaceViewerProps {
   race: Race
@@ -34,6 +36,7 @@ interface RaceViewerProps {
   raceControl: OpenF1RaceControl[]
   pitStops: OpenF1PitStop[]
   weather: OpenF1Weather[]
+  teamRadio: OpenF1TeamRadio[]
 }
 
 interface Standing {
@@ -97,6 +100,7 @@ export function RaceViewer({
   raceControl,
   pitStops,
   weather,
+  teamRadio,
 }: RaceViewerProps) {
   const [currentLap, setCurrentLap] = useState(1)
   const [lapProgress, setLapProgress] = useState(0) // 0-1 progress within current lap
@@ -301,6 +305,16 @@ export function RaceViewer({
               onClose={() => handleDriverSelect(null)}
             />
           )}
+
+          {/* Team Radio Panel (floating over track - bottom right) */}
+          <div className="absolute bottom-24 right-4 z-30 w-80">
+            <TeamRadioPanel
+              teamRadio={teamRadio}
+              drivers={drivers}
+              currentLap={currentLap}
+              laps={laps}
+            />
+          </div>
         </div>
 
         {/* Chat Panel */}

@@ -168,6 +168,19 @@ export interface OpenF1Weather {
   wind_speed: number
 }
 
+/**
+ * TeamRadio - Team radio communications
+ * Endpoint: /team_radio
+ * Note: Contains URLs to audio recordings of driver-team communications
+ */
+export interface OpenF1TeamRadio {
+  meeting_key: number
+  session_key: number
+  driver_number: number
+  date: string
+  recording_url: string
+}
+
 // Frontend-friendly mapped types
 
 /**
