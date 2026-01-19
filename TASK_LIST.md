@@ -370,17 +370,17 @@
 
 ---
 
-### **Story 5.6: Add Car Selection & Driver Highlight** ⬜
+### **Story 5.6: Add Car Selection & Driver Highlight** ✅
 
 **Story:** As a user, I want to click on a car in the 3D view to highlight that driver's information so that I can focus on specific drivers.
 
-- ⬜ **Task 5.6.1:** Add click detection to car meshes in TrackVisualization (raycast or onClick)
-- ⬜ **Task 5.6.2:** Create selected driver state (useState or context)
-- ⬜ **Task 5.6.3:** Highlight selected car with glow/outline effect
-- ⬜ **Task 5.6.4:** Highlight corresponding row in Leaderboard component
-- ⬜ **Task 5.6.5:** Create DriverDetailsPanel component (name, team, current position, gap, tire compound)
-- ⬜ **Task 5.6.6:** Position panel near selected car or in dedicated UI area
-- ⬜ **Task 5.6.7:** Add click-away or X button to deselect driver
+- ✅ **Task 5.6.1:** Add click detection to car meshes in TrackVisualization (raycast or onClick)
+- ✅ **Task 5.6.2:** Create selected driver state (useState or context)
+- ✅ **Task 5.6.3:** Highlight selected car with glow/outline effect
+- ✅ **Task 5.6.4:** Highlight corresponding row in Leaderboard component
+- ✅ **Task 5.6.5:** Create DriverDetailsPanel component (name, team, current position, gap, tire compound)
+- ✅ **Task 5.6.6:** Position panel near selected car or in dedicated UI area
+- ✅ **Task 5.6.7:** Add click-away or X button to deselect driver
 
 **Acceptance:** Clicking a car highlights it and its leaderboard row, showing detailed driver info; clicking away deselects.
 
@@ -523,7 +523,7 @@ Story 1.4 → Story 5.7 (position data required to detect overtakes)
 | `/lib/track-calibration.ts` | 5.4 | Per-circuit transformation data for coordinate alignment | ✅ Created |
 | `/components/race-viewer/Track3D.tsx` | 5.4 | 3D track component with SVGLoader | ✅ Created |
 | `/components/race-viewer/F1Car.tsx` | 5.5 | Reusable F1 car 3D component with team colors | ✅ Created |
-| `/components/race-viewer/DriverDetailsPanel.tsx` | 5.6 | Selected driver info panel | ⬜ Not Started |
+| `/components/race-viewer/DriverDetailsPanel.tsx` | 5.6 | Selected driver info panel | ✅ Created |
 | `/components/race-viewer/KeyMomentChip.tsx` | 5.7 | Clickable overtake/incident chip | ⬜ Not Started |
 | `/lib/race-moments.ts` | 5.7 | Utility to detect overtakes from position data | ⬜ Not Started |
 | `/components/race-viewer/WeatherWidget.tsx` | 5.8 | Track conditions display widget | ⬜ Not Started |
@@ -548,5 +548,5 @@ Story 1.4 → Story 5.7 (position data required to detect overtakes)
 | `/types/openf1.ts` | 5.8-5.9 | Add Weather and TeamRadio types | ⬜ Not Started |
 | `/lib/openf1.ts` | 5.8-5.9 | Add getWeather() and getTeamRadio() functions | ⬜ Not Started |
 | `/components/race-viewer/Timeline.tsx` | 5.7 | Add KeyMomentChip positioning above timeline | ⬜ Not Started |
-| `/components/race-viewer/Leaderboard.tsx` | 5.6 | Add selected driver highlight styling | ⬜ Not Started |
+| `/components/race-viewer/Leaderboard.tsx` | 5.6 | Add selected driver highlight styling | ✅ Updated |
 | Race header component | 5.8 | Add WeatherWidget display | ⬜ Not Started |

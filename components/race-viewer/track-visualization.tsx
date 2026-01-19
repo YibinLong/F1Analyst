@@ -46,6 +46,8 @@ interface TrackVisualizationProps {
   locations?: OpenF1Location[]
   laps?: OpenF1Lap[]
   totalLaps?: number
+  selectedDriverNumber?: number | null
+  onDriverSelect?: (driverNumber: number | null) => void
 }
 
 // Convert SVG path to 3D points
@@ -184,6 +186,8 @@ function AnimatedCar({
   lapProgress,
   totalLaps,
   trackId,
+  isSelected,
+  onClick,
 }: {
   driverNumber: number
   color: string
@@ -194,6 +198,8 @@ function AnimatedCar({
   lapProgress: number
   totalLaps: number
   trackId: string
+  isSelected?: boolean
+  onClick?: () => void
 }) {
   const groupRef = useRef<THREE.Group>(null)
   const targetPosition = useRef({ x: 0, y: 0.45, z: 0 })
@@ -257,6 +263,8 @@ function AnimatedCar({
         teamColor={color}
         driverNumber={driverNumber}
         showTrail={true}
+        isSelected={isSelected}
+        onClick={onClick}
       />
     </group>
   )
@@ -277,6 +285,8 @@ function CarFallback({
   lapProgress = 0,
   totalLaps = 57,
   startMeta,
+  isSelected,
+  onClick,
 }: {
   color: string
   index: number
@@ -288,6 +298,8 @@ function CarFallback({
   lapProgress?: number
   totalLaps?: number
   startMeta?: StartLineMeta | null
+  isSelected?: boolean
+  onClick?: () => void
 }) {
   const groupRef = useRef<THREE.Group>(null)
   const currentRotation = useRef(0)
@@ -405,6 +417,8 @@ function CarFallback({
         teamColor={color}
         driverNumber={driverNumber}
         showTrail={lapProgress > 0.02 || currentLap > 1}
+        isSelected={isSelected}
+        onClick={onClick}
       />
     </group>
   )
@@ -425,6 +439,9 @@ interface SceneProps {
   // Track points for fallback car positioning
   trackPoints?: Track3DPoint[]
   startMeta?: StartLineMeta | null
+  // Selection props
+  selectedDriverNumber?: number | null
+  onDriverSelect?: (driverNumber: number | null) => void
 }
 
 function Scene({
@@ -440,6 +457,8 @@ function Scene({
   totalLaps = 57,
   trackPoints = [],
   startMeta = null,
+  selectedDriverNumber,
+  onDriverSelect,
 }: SceneProps) {
   return (
     <>
@@ -462,6 +481,11 @@ function Scene({
 
       {standings.slice(0, 20).map((standing, index) => {
         const driverLocations = locationsByDriver?.get(standing.driver.number)
+        const isSelected = selectedDriverNumber === standing.driver.number
+        const handleClick = () => {
+          // Toggle selection: if already selected, deselect; otherwise select
+          onDriverSelect?.(isSelected ? null : standing.driver.number)
+        }
 
         // Use AnimatedCar for smooth 60fps animation when we have location data
         if (useRealPositions && driverLocations && driverLocations.length > 0 && trackBounds && raceTimeRange) {
@@ -477,6 +501,8 @@ function Scene({
               lapProgress={lapProgress}
               totalLaps={totalLaps}
               trackId={trackId}
+              isSelected={isSelected}
+              onClick={handleClick}
             />
           )
         }
@@ -491,6 +517,8 @@ function Scene({
                 teamColor={standing.driver.teamColor}
                 driverNumber={standing.driver.number}
                 showTrail={true}
+                isSelected={isSelected}
+                onClick={handleClick}
               />
             </group>
           )
@@ -510,6 +538,8 @@ function Scene({
             lapProgress={lapProgress}
             totalLaps={totalLaps}
             startMeta={startMeta}
+            isSelected={isSelected}
+            onClick={handleClick}
           />
         )
       })}
@@ -527,6 +557,8 @@ export function TrackVisualization({
   locations = [],
   laps = [],
   totalLaps = 57,
+  selectedDriverNumber,
+  onDriverSelect,
 }: TrackVisualizationProps) {
   // DEBUG: Log what TrackVisualization receives
   useEffect(() => {
@@ -687,6 +719,8 @@ export function TrackVisualization({
               totalLaps={totalLaps}
               trackPoints={trackPoints}
               startMeta={startMeta}
+              selectedDriverNumber={selectedDriverNumber}
+              onDriverSelect={onDriverSelect}
             />
           </Suspense>
         </Canvas>

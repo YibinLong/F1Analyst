@@ -14,6 +14,7 @@ import { TrackVisualization } from "./track-visualization"
 import { Leaderboard } from "./leaderboard"
 import { Timeline } from "./timeline"
 import { ChatPanel } from "../chat/chat-panel"
+import { DriverDetailsPanel } from "./DriverDetailsPanel"
 
 interface RaceViewerProps {
   race: Race
@@ -93,6 +94,7 @@ export function RaceViewer({
   const [isPlaying, setIsPlaying] = useState(false)
   const [playbackSpeed, setPlaybackSpeed] = useState(1)
   const [isChatOpen, setIsChatOpen] = useState(true)
+  const [selectedDriverNumber, setSelectedDriverNumber] = useState<number | null>(null)
 
   // Refs for requestAnimationFrame playback
   const animationFrameRef = useRef<number | null>(null)
@@ -177,6 +179,16 @@ export function RaceViewer({
     setPlaybackSpeed(speed)
   }, [])
 
+  const handleDriverSelect = useCallback((driverNumber: number | null) => {
+    setSelectedDriverNumber(driverNumber)
+  }, [])
+
+  // Get selected driver's standing data for the details panel
+  const selectedDriverStanding = useMemo(() => {
+    if (!selectedDriverNumber) return null
+    return standings.find(s => s.driver.number === selectedDriverNumber) || null
+  }, [selectedDriverNumber, standings])
+
   // Smooth 60fps playback using requestAnimationFrame
   useEffect(() => {
     if (!isPlaying) {
@@ -249,7 +261,11 @@ export function RaceViewer({
       <div className="flex-1 flex overflow-hidden">
         {/* Leaderboard Panel */}
         <div className="w-72 flex-shrink-0 border-r border-border/50">
-          <Leaderboard standings={standings} />
+          <Leaderboard
+            standings={standings}
+            selectedDriverNumber={selectedDriverNumber}
+            onDriverSelect={handleDriverSelect}
+          />
         </div>
 
         {/* Track Visualization */}
@@ -262,7 +278,20 @@ export function RaceViewer({
             locations={locations}
             laps={laps}
             totalLaps={totalLaps}
+            selectedDriverNumber={selectedDriverNumber}
+            onDriverSelect={handleDriverSelect}
           />
+
+          {/* Driver Details Panel (floating over track) */}
+          {selectedDriverStanding && (
+            <DriverDetailsPanel
+              driver={selectedDriverStanding.driver}
+              position={selectedDriverStanding.position}
+              interval={selectedDriverStanding.interval}
+              gapToLeader={selectedDriverStanding.gapToLeader}
+              onClose={() => handleDriverSelect(null)}
+            />
+          )}
         </div>
 
         {/* Chat Panel */}

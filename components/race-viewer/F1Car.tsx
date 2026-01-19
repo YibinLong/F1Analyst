@@ -10,6 +10,7 @@ interface F1CarProps {
   driverNumber: number
   isSelected?: boolean
   showTrail?: boolean
+  onClick?: () => void
 }
 
 /**
@@ -28,8 +29,10 @@ export function F1Car({
   driverNumber,
   isSelected = false,
   showTrail = true,
+  onClick,
 }: F1CarProps) {
   const groupRef = useRef<THREE.Group>(null)
+  const pulseRef = useRef<THREE.Mesh>(null)
 
   // Create materials with team color
   const materials = useMemo(() => {
@@ -68,11 +71,42 @@ export function F1Car({
     }
   }, [materials])
 
+  // Animate selection pulse effect
+  useFrame((state) => {
+    if (isSelected && pulseRef.current) {
+      const pulse = Math.sin(state.clock.elapsedTime * 4) * 0.5 + 0.5
+      pulseRef.current.scale.setScalar(1 + pulse * 0.3)
+      if (pulseRef.current.material instanceof THREE.MeshBasicMaterial) {
+        pulseRef.current.material.opacity = 0.3 + pulse * 0.3
+      }
+    }
+  })
+
   // Scale factor for 3x track size
   const s = 3
 
   return (
-    <group ref={groupRef} position={position}>
+    <group ref={groupRef} position={position} onClick={onClick}>
+      {/* Invisible click target - larger hitbox for easier clicking */}
+      <mesh visible={false}>
+        <boxGeometry args={[0.6 * s, 0.3 * s, 0.3 * s]} />
+        <meshBasicMaterial transparent opacity={0} />
+      </mesh>
+
+      {/* Selection ring effect */}
+      {isSelected && (
+        <mesh ref={pulseRef} position={[0, 0.01 * s, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.25 * s, 0.35 * s, 32]} />
+          <meshBasicMaterial
+            color={teamColor}
+            transparent
+            opacity={0.5}
+            side={THREE.DoubleSide}
+            blending={THREE.AdditiveBlending}
+          />
+        </mesh>
+      )}
+
       {/* Main body - elongated box */}
       <mesh material={materials.body} position={[0, 0.03 * s, 0]}>
         <boxGeometry args={[0.35 * s, 0.06 * s, 0.14 * s]} />
@@ -236,6 +270,7 @@ interface AnimatedF1CarProps {
   teamColor: string
   driverNumber: number
   isSelected?: boolean
+  onClick?: () => void
 }
 
 // Reusable vectors to avoid garbage collection
@@ -247,6 +282,7 @@ export function AnimatedF1Car({
   teamColor,
   driverNumber,
   isSelected = false,
+  onClick,
 }: AnimatedF1CarProps) {
   const groupRef = useRef<THREE.Group>(null)
   const previousPosition = useRef({ x: targetPosition.x, y: targetPosition.y, z: targetPosition.z })
@@ -302,6 +338,7 @@ export function AnimatedF1Car({
         driverNumber={driverNumber}
         isSelected={isSelected}
         showTrail={true}
+        onClick={onClick}
       />
     </group>
   )
