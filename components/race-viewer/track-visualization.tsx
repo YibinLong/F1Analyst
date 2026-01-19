@@ -5,7 +5,14 @@ import { OrbitControls, PerspectiveCamera, Environment } from "@react-three/drei
 import { Suspense, useMemo, useRef, useEffect, useState } from "react"
 import * as THREE from "three"
 import type { Driver } from "@/lib/f1-teams"
-import type { OpenF1Location, OpenF1Lap } from "@/types/openf1"
+import type { OpenF1Location } from "@/types/openf1"
+
+// Essential lap data (reduced payload from API)
+interface EssentialLap {
+  lap_number: number
+  driver_number: number
+  date_start: string | null
+}
 import { trackPaths } from "@/lib/track-paths"
 import {
   calculateTrackBounds,
@@ -44,7 +51,7 @@ interface TrackVisualizationProps {
   currentLap: number
   lapProgress?: number // 0-1 progress within current lap for smooth animation
   locations?: OpenF1Location[]
-  laps?: OpenF1Lap[]
+  laps?: EssentialLap[]
   totalLaps?: number
   selectedDriverNumber?: number | null
   onDriverSelect?: (driverNumber: number | null) => void

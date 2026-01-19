@@ -175,15 +175,21 @@ export async function GET(request: Request, { params }: RouteParams) {
   const positionsByLap = laps && positions ? groupPositionsByLap(positions, laps) : {}
   const intervalsByLap = laps && intervals ? groupIntervalsByLap(intervals, laps) : {}
 
+  // Only send essential lap data fields to reduce payload size
+  // The frontend only needs lap_number, driver_number, and date_start for timeline mapping
+  const essentialLaps = (laps || []).map(lap => ({
+    lap_number: lap.lap_number,
+    driver_number: lap.driver_number,
+    date_start: lap.date_start,
+  }))
+
   return NextResponse.json({
     race,
     drivers: mappedDrivers,
     totalLaps,
     sessionKey: session.session_key,
-    // Raw data for the race viewer
-    positions: positions || [],
-    intervals: intervals || [],
-    laps: laps || [],
+    // Essential data for the race viewer (removed raw positions/intervals - use grouped data instead)
+    laps: essentialLaps,
     locations: locations || [],
     raceControl: raceControl || [],
     pitStops: pitStops || [],

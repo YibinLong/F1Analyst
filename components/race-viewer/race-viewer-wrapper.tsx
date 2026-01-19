@@ -7,8 +7,6 @@ import { RaceViewerSkeleton } from "./race-viewer-skeleton"
 import type { Race } from "@/lib/race-data"
 import type { Driver } from "@/lib/f1-teams"
 import type {
-  OpenF1Position,
-  OpenF1Interval,
   OpenF1Lap,
   OpenF1Location,
   OpenF1RaceControl,
@@ -27,14 +25,19 @@ interface RaceViewerWrapperProps {
   }
 }
 
+// Essential lap data type (reduced payload)
+interface EssentialLap {
+  lap_number: number
+  driver_number: number
+  date_start: string | null
+}
+
 interface RaceData {
   race: Race
   drivers: Driver[]
   totalLaps: number
   sessionKey: number
-  positions: OpenF1Position[]
-  intervals: OpenF1Interval[]
-  laps: OpenF1Lap[]
+  laps: EssentialLap[]
   locations: OpenF1Location[]
   raceControl: OpenF1RaceControl[]
   pitStops: OpenF1PitStop[]
@@ -80,12 +83,12 @@ export function RaceViewerWrapper({ meetingKey, initialRaceInfo }: RaceViewerWra
         console.log(`  - drivers: ${data.drivers?.length ?? 'null'} drivers`)
         console.log(`  - totalLaps: ${data.totalLaps ?? 'null'}`)
         console.log(`  - sessionKey: ${data.sessionKey ?? 'null'}`)
-        console.log(`  - positions: ${data.positions?.length ?? 'null'} records`)
-        console.log(`  - intervals: ${data.intervals?.length ?? 'null'} records`)
-        console.log(`  - laps: ${data.laps?.length ?? 'null'} records`)
+        console.log(`  - laps: ${data.laps?.length ?? 'null'} records (essential fields only)`)
         console.log(`  - locations: ${data.locations?.length ?? 'null'} records  ← 🔍 KEY DATA`)
         console.log(`  - raceControl: ${data.raceControl?.length ?? 'null'} records`)
         console.log(`  - pitStops: ${data.pitStops?.length ?? 'null'} records`)
+        console.log(`  - positionsByLap: ${Object.keys(data.positionsByLap || {}).length} laps (pre-grouped)`)
+        console.log(`  - intervalsByLap: ${Object.keys(data.intervalsByLap || {}).length} laps (pre-grouped)`)
 
         if (!data.locations || data.locations.length === 0) {
           console.warn(`[RaceViewerWrapper DEBUG] ⚠️ NO LOCATIONS in API response!`)

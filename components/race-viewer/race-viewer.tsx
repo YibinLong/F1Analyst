@@ -5,10 +5,16 @@ import type { Race } from "@/lib/race-data"
 import { drivers2025, type Driver } from "@/lib/f1-teams"
 import type {
   OpenF1Location,
-  OpenF1Lap,
   OpenF1RaceControl,
   OpenF1PitStop,
 } from "@/types/openf1"
+
+// Essential lap data (reduced payload from API)
+interface EssentialLap {
+  lap_number: number
+  driver_number: number
+  date_start: string | null
+}
 import { RaceHeader } from "./race-header"
 import { TrackVisualization } from "./track-visualization"
 import { Leaderboard } from "./leaderboard"
@@ -23,7 +29,7 @@ interface RaceViewerProps {
   positionsByLap: Record<number, Record<number, number>>
   intervalsByLap: Record<number, Record<number, { interval: number | string | null; gapToLeader: number | string | null }>>
   locations: OpenF1Location[]
-  laps: OpenF1Lap[]
+  laps: EssentialLap[]
   raceControl: OpenF1RaceControl[]
   pitStops: OpenF1PitStop[]
 }

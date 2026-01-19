@@ -195,13 +195,14 @@ export async function getDrivers(sessionKey: number): Promise<OpenF1Driver[] | n
 
 /**
  * Sample location data to reduce volume while preserving important points
- * OpenF1 returns ~3.7 Hz data, visualization only needs ~1 Hz
+ * OpenF1 returns ~3.7 Hz data, visualization only needs ~0.5 Hz for smooth animation
+ * The interpolation in track-utils.ts smooths between sample points
  * @param locations - Raw location data
- * @param sampleRate - Sample every Nth point (default: 4 for ~1 Hz from 3.7 Hz)
+ * @param sampleRate - Sample every Nth point (default: 8 for ~0.5 Hz from 3.7 Hz)
  */
 function sampleLocationData(
   locations: OpenF1Location[],
-  sampleRate: number = 4
+  sampleRate: number = 8
 ): OpenF1Location[] {
   if (locations.length <= 2 || sampleRate <= 1) {
     return locations
@@ -274,7 +275,8 @@ async function fetchLocationChunk(
  *
  * IMPORTANT: The location endpoint returns data at ~3.7 Hz, which is MASSIVE.
  * This function fetches in 5-minute chunks to avoid "too much data" errors.
- * Data is sampled at ~1 Hz by default (every 4th point) to reduce volume by ~75%.
+ * Data is sampled at ~0.5 Hz by default (every 8th point) to reduce volume by ~87.5%.
+ * The frontend interpolation smooths between sample points for 60fps animation.
  */
 export async function getLocations(
   sessionKey: number,
@@ -282,10 +284,10 @@ export async function getLocations(
     driverNumber?: number
     dateStart?: string
     dateEnd?: string
-    sampleRate?: number // Sample every Nth point (default: 4 for ~1 Hz)
+    sampleRate?: number // Sample every Nth point (default: 8 for ~0.5 Hz)
   }
 ): Promise<OpenF1Location[] | null> {
-  const { driverNumber, dateStart, dateEnd, sampleRate = 4 } = options || {}
+  const { driverNumber, dateStart, dateEnd, sampleRate = 8 } = options || {}
   console.log(`[OpenF1 DEBUG] 📍 getLocations() called with session_key: ${sessionKey}, driverNumber: ${driverNumber ?? 'ALL'}, dateStart: ${dateStart ?? 'none'}, dateEnd: ${dateEnd ?? 'none'}, sampleRate: ${sampleRate}`)
 
   // Without date range, we can't fetch location data (too much data error)
