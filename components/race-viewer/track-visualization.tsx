@@ -33,7 +33,7 @@ import {
   type StartLineMeta,
   type Track3DPoint,
 } from "@/lib/track-svg-utils"
-import { getTrackCalibration } from "@/lib/track-calibration"
+import { getTrackCalibration, getCarScale } from "@/lib/track-calibration"
 import { TrackVisualizationErrorBoundary } from "@/components/error-boundary"
 import { LocationDataUnavailable } from "./data-unavailable"
 import { Track3D } from "./Track3D"
@@ -213,6 +213,7 @@ function AnimatedCar({
   const targetPosition = useRef({ x: 0, y: 0.45, z: 0 })
   const targetRotation = useRef(0)
   const currentRotation = useRef(0)
+  const carScale = useMemo(() => getCarScale(trackId), [trackId])
 
   // Calculate target position AND rotation based on current lap and progress
   // Rotation is calculated from the track trajectory (before -> after points)
@@ -262,6 +263,7 @@ function AnimatedCar({
         showTrail={true}
         isSelected={isSelected}
         onClick={onClick}
+        scale={carScale}
       />
     </group>
   )
@@ -301,6 +303,7 @@ function CarFallback({
   const groupRef = useRef<THREE.Group>(null)
   const currentRotation = useRef(0)
   const calibration = useMemo(() => getTrackCalibration(trackId), [trackId])
+  const carScale = useMemo(() => getCarScale(trackId), [trackId])
   const carHeight = calibration.render.carHeight * 3
   const trackWidth = calibration.render.trackWidth
 
@@ -333,12 +336,15 @@ function CarFallback({
     const isStartingGrid = currentLap === 1 && lapProgress < 0.02
 
     if (isStartingGrid) {
-      // Use track-specific width for grid positioning
+      // Use track-specific width and car scale for grid positioning
+      // Scale grid spacing based on car scale to ensure proper fit
+      const scaledGridSpacing = trackWidth * 1.6 * carScale  // Row spacing accounts for car size
+      const scaledLaneOffset = trackWidth * 0.35 * carScale  // Lane offset accounts for car size
       const gridPositions = calculateStartingGridPositions(
         trackPoints,
         totalCars,
-        trackWidth * 1.6,  // Row spacing relative to track width
-        trackWidth * 0.35, // Lane offset relative to track width
+        scaledGridSpacing,
+        scaledLaneOffset,
         meta
       )
       if (gridPositions.length > 0) {
@@ -376,7 +382,7 @@ function CarFallback({
       targetPosition: { ...result.position, y: carHeight },
       targetRotation: result.rotation
     }
-  }, [trackPoints, index, totalCars, currentLap, lapProgress, totalLaps, calibration.render.trackScale, carHeight, trackWidth, startMeta])
+  }, [trackPoints, index, totalCars, currentLap, lapProgress, totalLaps, calibration.render.trackScale, carHeight, trackWidth, carScale, startMeta])
 
   // Smooth animation every frame
   useFrame(() => {
@@ -416,6 +422,7 @@ function CarFallback({
         showTrail={lapProgress > 0.02 || currentLap > 1}
         isSelected={isSelected}
         onClick={onClick}
+        scale={carScale}
       />
     </group>
   )
@@ -457,6 +464,8 @@ function Scene({
   selectedDriverNumber,
   onDriverSelect,
 }: SceneProps) {
+  const carScale = useMemo(() => getCarScale(trackId), [trackId])
+
   return (
     <>
       <PerspectiveCamera makeDefault position={[0, 36, 45]} fov={50} />
@@ -516,6 +525,7 @@ function Scene({
                 showTrail={true}
                 isSelected={isSelected}
                 onClick={handleClick}
+                scale={carScale}
               />
             </group>
           )

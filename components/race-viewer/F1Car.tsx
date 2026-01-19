@@ -11,6 +11,7 @@ interface F1CarProps {
   isSelected?: boolean
   showTrail?: boolean
   onClick?: () => void
+  scale?: number  // Car scale multiplier (default: 1.0, applied on top of base 3x scale)
 }
 
 /**
@@ -30,6 +31,7 @@ export function F1Car({
   isSelected = false,
   showTrail = true,
   onClick,
+  scale = 1.0,
 }: F1CarProps) {
   const groupRef = useRef<THREE.Group>(null)
   const pulseRef = useRef<THREE.Mesh>(null)
@@ -82,8 +84,9 @@ export function F1Car({
     }
   })
 
-  // Scale factor for 3x track size
-  const s = 3
+  // Scale factor: base 3x for track size, multiplied by optional scale prop
+  // This allows per-track car sizing to ensure cars fit within track bounds
+  const s = 3 * scale
 
   return (
     <group ref={groupRef} position={position} onClick={onClick}>
@@ -165,7 +168,7 @@ export function F1Car({
 
       {/* Motion trail effect */}
       {showTrail && (
-        <MotionTrail teamColor={teamColor} />
+        <MotionTrail teamColor={teamColor} scale={scale} />
       )}
 
       {/* Selection highlight */}
@@ -182,10 +185,10 @@ export function F1Car({
  * Creates an Akira-style motion trail effect behind the car
  * Multiple colored streaks that extend behind for speed effect
  */
-function MotionTrail({ teamColor }: { teamColor: string }) {
+function MotionTrail({ teamColor, scale = 1.0 }: { teamColor: string; scale?: number }) {
   const trailColor = new THREE.Color(teamColor)
-  // Scale factor for 3x track size
-  const s = 3
+  // Scale factor: base 3x for track size, multiplied by optional scale prop
+  const s = 3 * scale
 
   // Create Akira-style speed lines using thin elongated shapes
   return (
@@ -275,6 +278,7 @@ interface AnimatedF1CarProps {
   driverNumber: number
   isSelected?: boolean
   onClick?: () => void
+  scale?: number  // Car scale multiplier (default: 1.0)
 }
 
 // Reusable vectors to avoid garbage collection
@@ -287,6 +291,7 @@ export function AnimatedF1Car({
   driverNumber,
   isSelected = false,
   onClick,
+  scale = 1.0,
 }: AnimatedF1CarProps) {
   const groupRef = useRef<THREE.Group>(null)
   const currentRotation = useRef(0)
@@ -333,6 +338,7 @@ export function AnimatedF1Car({
         isSelected={isSelected}
         showTrail={true}
         onClick={onClick}
+        scale={scale}
       />
     </group>
   )
