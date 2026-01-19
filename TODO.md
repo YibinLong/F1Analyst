@@ -6,7 +6,10 @@ TODO (Tuesday, Dec 30, 2025)
    - Increased location sampling rate from 4 to 8 (~87.5% reduction vs raw data)
    - See commit for details
 
-2. make it so the laps go thru slower (make it like: it takes 1 min per lap, 2 min, 3 min per lap, stuff like that (WHILE ALSO KEEPING THE EXISTING SPEEDS - find a way to mesh them together))
+2. ✅ DONE - Added slower playback speeds (1m, 2m, 3m per lap) alongside existing speeds (0.5x, 1x, 2x, 4x)
+   - Speed options in timeline.tsx: 3m, 2m, 1m, 0.5x, 1x, 2x, 4x
+   - Animation system uses playbackSpeed to calculate lapDurationMs = 1000 / playbackSpeed
+   - Example: 1/60 speed = 60000ms per lap = 1 minute per lap
 
 3. make it so the cars actually point in the right direction as youre going thru the laps (right now they're pointed all over the place, NOT parallel to the track!) - right now, as cars are going around the track, you know how you expect cars to be pointed in the direction the track is going? theyre not pointed that direction right now! you might need to do something to connect the way the car points with the way the track moves. (right now, it looks like as if it goes around the track in weird pointed ways, but when i PAUSE, it fixes itself.)
 
