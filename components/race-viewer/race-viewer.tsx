@@ -332,6 +332,7 @@ export function RaceViewer({
         pitStops={pitStops}
         raceControl={raceControl}
         drivers={drivers}
+        positionsByLap={positionsByLap}
       />
     </div>
   )

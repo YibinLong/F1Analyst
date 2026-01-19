@@ -388,17 +388,17 @@
 
 ---
 
-### **Story 5.7: Add Key Moments Timeline Chips** ⬜
+### **Story 5.7: Add Key Moments Timeline Chips** ✅
 
 **Story:** As a user, I want to see key race moments (overtakes, incidents) as chips above the timeline so that I can jump to exciting parts of the race.
 
-- ⬜ **Task 5.7.1:** Create utility function to detect overtakes from position data changes
-- ⬜ **Task 5.7.2:** Filter to significant overtakes only (top 10 drivers, exclude pit-related position changes)
-- ⬜ **Task 5.7.3:** Create KeyMomentChip component with icon and label (e.g., "VER → NOR")
-- ⬜ **Task 5.7.4:** Position chips above timeline at correct lap/time position
-- ⬜ **Task 5.7.5:** Add click handler to jump timeline to that moment
-- ⬜ **Task 5.7.6:** Add hover tooltip with more details (lap number, position change)
-- ⬜ **Task 5.7.7:** Limit visible chips to prevent overcrowding (max 10-15 moments)
+- ✅ **Task 5.7.1:** Create utility function to detect overtakes from position data changes
+- ✅ **Task 5.7.2:** Filter to significant overtakes only (top 10 drivers, exclude pit-related position changes)
+- ✅ **Task 5.7.3:** Create KeyMomentChip component with icon and label (e.g., "VER → NOR")
+- ✅ **Task 5.7.4:** Position chips above timeline at correct lap/time position
+- ✅ **Task 5.7.5:** Add click handler to jump timeline to that moment
+- ✅ **Task 5.7.6:** Add hover tooltip with more details (lap number, position change)
+- ✅ **Task 5.7.7:** Limit visible chips to prevent overcrowding (max 10-15 moments)
 
 **Acceptance:** Timeline displays clickable chips for major overtakes; clicking jumps to that moment.
 
@@ -524,8 +524,8 @@ Story 1.4 → Story 5.7 (position data required to detect overtakes)
 | `/components/race-viewer/Track3D.tsx` | 5.4 | 3D track component with SVGLoader | ✅ Created |
 | `/components/race-viewer/F1Car.tsx` | 5.5 | Reusable F1 car 3D component with team colors | ✅ Created |
 | `/components/race-viewer/DriverDetailsPanel.tsx` | 5.6 | Selected driver info panel | ✅ Created |
-| `/components/race-viewer/KeyMomentChip.tsx` | 5.7 | Clickable overtake/incident chip | ⬜ Not Started |
-| `/lib/race-moments.ts` | 5.7 | Utility to detect overtakes from position data | ⬜ Not Started |
+| `/components/race-viewer/KeyMomentChip.tsx` | 5.7 | Clickable overtake/incident chip | ✅ Created |
+| `/lib/race-moments.ts` | 5.7 | Utility to detect overtakes from position data | ✅ Created |
 | `/components/race-viewer/WeatherWidget.tsx` | 5.8 | Track conditions display widget | ⬜ Not Started |
 | `/components/race-viewer/TeamRadioPanel.tsx` | 5.9 | Team radio clips list and player | ⬜ Not Started |
 
@@ -547,6 +547,6 @@ Story 1.4 → Story 5.7 (position data required to detect overtakes)
 | `/components/race-viewer/track-visualization.tsx` | 5.4-5.5 | Integrated Track3D and F1Car, added rotation tracking | ✅ Updated |
 | `/types/openf1.ts` | 5.8-5.9 | Add Weather and TeamRadio types | ⬜ Not Started |
 | `/lib/openf1.ts` | 5.8-5.9 | Add getWeather() and getTeamRadio() functions | ⬜ Not Started |
-| `/components/race-viewer/Timeline.tsx` | 5.7 | Add KeyMomentChip positioning above timeline | ⬜ Not Started |
+| `/components/race-viewer/Timeline.tsx` | 5.7 | Add KeyMomentChip positioning above timeline | ✅ Updated |
 | `/components/race-viewer/Leaderboard.tsx` | 5.6 | Add selected driver highlight styling | ✅ Updated |
 | Race header component | 5.8 | Add WeatherWidget display | ⬜ Not Started |
