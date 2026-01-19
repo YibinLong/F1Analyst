@@ -39,7 +39,7 @@ interface RaceData {
   raceControl: OpenF1RaceControl[]
   pitStops: OpenF1PitStop[]
   positionsByLap: Record<number, Record<number, number>>
-  intervalsByLap: Record<number, Record<number, { interval: number | null; gapToLeader: number | null }>>
+  intervalsByLap: Record<number, Record<number, { interval: number | string | null; gapToLeader: number | string | null }>>
 }
 
 export function RaceViewerWrapper({ meetingKey, initialRaceInfo }: RaceViewerWrapperProps) {
