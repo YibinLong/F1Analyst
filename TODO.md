@@ -11,7 +11,13 @@ TODO (Tuesday, Dec 30, 2025)
    - Animation system uses playbackSpeed to calculate lapDurationMs = 1000 / playbackSpeed
    - Example: 1/60 speed = 60000ms per lap = 1 minute per lap
 
-3. make it so the cars actually point in the right direction as youre going thru the laps (right now they're pointed all over the place, NOT parallel to the track!) - right now, as cars are going around the track, you know how you expect cars to be pointed in the direction the track is going? theyre not pointed that direction right now! you might need to do something to connect the way the car points with the way the track moves. (right now, it looks like as if it goes around the track in weird pointed ways, but when i PAUSE, it fixes itself.)
+3. ✅ DONE - Fixed car orientation during animation:
+   - Root cause: Rotation was calculated from small frame-to-frame position deltas during lerp interpolation, creating noisy/jittery direction vectors
+   - Solution: Pre-calculate rotation from track trajectory (before->after location points) instead of from interpolated position deltas
+   - Added `getInterpolatedPositionWithRotation()` function to track-utils.ts that returns both position AND rotation
+   - Updated `AnimatedCar` component to use pre-calculated target rotation
+   - Updated `AnimatedF1Car` component to accept optional `targetRotation` prop
+   - Cars now smoothly interpolate to the correct rotation based on actual movement path, not frame deltas
 
 4. right now, for some tracks, like in Australia, the cars lined up at the start are such that they go OFF THE TRACK. that points to two possible solutions -> either make the cars small enough so they fit on the track, or the track bigger so the cars fit. either way, youll have to make the cars and track square away and connect to each other so they connect together better. right now i feel there's a disconnect which causes this lack of robustness in the 3D track viewer. this might require a significant refactor! that's okay.
 
