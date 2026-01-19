@@ -19,6 +19,14 @@ TODO (Tuesday, Dec 30, 2025)
    - Updated `AnimatedF1Car` component to accept optional `targetRotation` prop
    - Cars now smoothly interpolate to the correct rotation based on actual movement path, not frame deltas
 
-4. right now, for some tracks, like in Australia, the cars lined up at the start are such that they go OFF THE TRACK. that points to two possible solutions -> either make the cars small enough so they fit on the track, or the track bigger so the cars fit. either way, youll have to make the cars and track square away and connect to each other so they connect together better. right now i feel there's a disconnect which causes this lack of robustness in the 3D track viewer. this might require a significant refactor! that's okay.
+4. ✅ DONE - Fixed cars going off track at start grid (especially Australia):
+   - Root cause: Car size and grid spacing were hardcoded, causing overflow on narrow track sections
+   - Solution: Added dynamic car scaling system that ensures cars fit proportionally within track width
+   - New `getCarScale()` function in track-calibration.ts calculates appropriate car scale based on track width
+   - Car scale is now proportional: `targetTwoCarWidth = trackWidth * 0.7` → 2 cars side by side with comfortable margins
+   - F1Car component now accepts optional `scale` prop (applies on top of base 3x scale)
+   - Grid positioning now uses scaled spacing: `gridSpacing * carScale`, `laneOffset * carScale`
+   - Per-track calibration can override car scale via `render.carScale` if needed
+   - All 3 car rendering paths (AnimatedCar, static fallback, CarFallback) now use consistent scaling
 
 5. ✅ DONE - Fixed by Agent 2 (type mismatch for intervalsByLap)
