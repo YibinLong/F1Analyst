@@ -10,7 +10,7 @@ If TASK_LIST.md IS ALREADY complete, simply log that everything is done in the l
 
 NOTE:
 
-1. Create a separate commit for each logical change (e.g., feature, fix, refactor, etc) using Conventional Commit format and then push your changes straight onto the main branch. You have access to GitHub CLI.
+1. Create a separate commit for each logical change (e.g., feature, fix, refactor, etc) using Conventional Commit format and then push your changes straight onto the feat/multi-improvements (you're already on it) branch. You have access to GitHub CLI.
 
 2. Create and run the necessary tests to make sure everything is working.
 
