@@ -4,18 +4,27 @@ import { useMemo } from "react"
 import Link from "next/link"
 import { ArrowLeft, Flag } from "lucide-react"
 import type { Race } from "@/lib/race-data"
-import type { OpenF1RaceControl } from "@/types/openf1"
+import type { OpenF1RaceControl, OpenF1Weather } from "@/types/openf1"
 import { Button } from "@/components/ui/button"
 import { getActiveFlags } from "@/lib/ai-context"
+import { WeatherWidget } from "./WeatherWidget"
+
+interface EssentialLap {
+  lap_number: number
+  driver_number: number
+  date_start: string | null
+}
 
 interface RaceHeaderProps {
   race: Race
   currentLap: number
   totalLaps: number
   raceControl?: OpenF1RaceControl[]
+  weather?: OpenF1Weather[]
+  laps?: EssentialLap[]
 }
 
-export function RaceHeader({ race, currentLap, totalLaps, raceControl }: RaceHeaderProps) {
+export function RaceHeader({ race, currentLap, totalLaps, raceControl, weather, laps }: RaceHeaderProps) {
   // Detect active flags at current lap
   const activeFlags = useMemo(
     () => getActiveFlags(raceControl || [], currentLap),
@@ -53,6 +62,11 @@ export function RaceHeader({ race, currentLap, totalLaps, raceControl }: RaceHea
       </div>
 
       <div className="flex items-center gap-4">
+        {/* Weather Widget */}
+        {weather && weather.length > 0 && laps && (
+          <WeatherWidget weather={weather} currentLap={currentLap} laps={laps} />
+        )}
+
         {/* Lap Counter */}
         <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-muted/50">
           <Flag className="w-4 h-4 text-primary" />

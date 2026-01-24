@@ -5,26 +5,38 @@ import type { Race } from "@/lib/race-data"
 import { drivers2025, type Driver } from "@/lib/f1-teams"
 import type {
   OpenF1Location,
-  OpenF1Lap,
   OpenF1RaceControl,
   OpenF1PitStop,
+  OpenF1Weather,
+  OpenF1TeamRadio,
 } from "@/types/openf1"
+
+// Essential lap data (reduced payload from API)
+interface EssentialLap {
+  lap_number: number
+  driver_number: number
+  date_start: string | null
+}
 import { RaceHeader } from "./race-header"
 import { TrackVisualization } from "./track-visualization"
 import { Leaderboard } from "./leaderboard"
 import { Timeline } from "./timeline"
 import { ChatPanel } from "../chat/chat-panel"
+import { DriverDetailsPanel } from "./DriverDetailsPanel"
+import { TeamRadioPanel } from "./TeamRadioPanel"
 
 interface RaceViewerProps {
   race: Race
   drivers: Driver[]
   totalLaps: number
   positionsByLap: Record<number, Record<number, number>>
-  intervalsByLap: Record<number, Record<number, { interval: number | null; gapToLeader: number | null }>>
+  intervalsByLap: Record<number, Record<number, { interval: number | string | null; gapToLeader: number | string | null }>>
   locations: OpenF1Location[]
-  laps: OpenF1Lap[]
+  laps: EssentialLap[]
   raceControl: OpenF1RaceControl[]
   pitStops: OpenF1PitStop[]
+  weather: OpenF1Weather[]
+  teamRadio: OpenF1TeamRadio[]
 }
 
 interface Standing {
@@ -36,21 +48,45 @@ interface Standing {
 
 /**
  * Format interval value for display
+ * Handles both numeric values and string values (e.g., "+1 LAP")
  */
-function formatInterval(value: number | null): string | null {
+function formatInterval(value: number | string | null): string | null {
   if (value === null) return null
-  if (value < 0) return null // Negative intervals can occur with data issues
-  return `+${value.toFixed(3)}`
+
+  // If it's already a string (like "+1 LAP"), return as-is
+  if (typeof value === 'string') {
+    return value
+  }
+
+  // If it's a number, format it
+  if (typeof value === 'number') {
+    if (value < 0) return null // Negative intervals can occur with data issues
+    return `+${value.toFixed(3)}`
+  }
+
+  return null
 }
 
 /**
  * Format gap to leader for display
+ * Handles both numeric values and string values (e.g., "+1 LAP", "+2 LAPS")
  */
-function formatGapToLeader(value: number | null, position: number): string | null {
+function formatGapToLeader(value: number | string | null, position: number): string | null {
   if (position === 1) return null // Leader shows no gap
   if (value === null) return null
-  if (value < 0) return null
-  return `+${value.toFixed(3)}`
+
+  // If it's already a string (like "+1 LAP"), return as-is
+  if (typeof value === 'string') {
+    return value
+  }
+
+  // If it's a number, format it
+  if (typeof value === 'number') {
+    if (value < 0) return null
+    return `+${value.toFixed(3)}`
+  }
+
+  return null
 }
 
 export function RaceViewer({
@@ -63,12 +99,15 @@ export function RaceViewer({
   laps,
   raceControl,
   pitStops,
+  weather,
+  teamRadio,
 }: RaceViewerProps) {
   const [currentLap, setCurrentLap] = useState(1)
   const [lapProgress, setLapProgress] = useState(0) // 0-1 progress within current lap
   const [isPlaying, setIsPlaying] = useState(false)
   const [playbackSpeed, setPlaybackSpeed] = useState(1)
   const [isChatOpen, setIsChatOpen] = useState(true)
+  const [selectedDriverNumber, setSelectedDriverNumber] = useState<number | null>(null)
 
   // Refs for requestAnimationFrame playback
   const animationFrameRef = useRef<number | null>(null)
@@ -153,6 +192,16 @@ export function RaceViewer({
     setPlaybackSpeed(speed)
   }, [])
 
+  const handleDriverSelect = useCallback((driverNumber: number | null) => {
+    setSelectedDriverNumber(driverNumber)
+  }, [])
+
+  // Get selected driver's standing data for the details panel
+  const selectedDriverStanding = useMemo(() => {
+    if (!selectedDriverNumber) return null
+    return standings.find(s => s.driver.number === selectedDriverNumber) || null
+  }, [selectedDriverNumber, standings])
+
   // Smooth 60fps playback using requestAnimationFrame
   useEffect(() => {
     if (!isPlaying) {
@@ -219,13 +268,17 @@ export function RaceViewer({
   return (
     <div className="h-screen flex flex-col">
       {/* Header */}
-      <RaceHeader race={race} currentLap={currentLap} totalLaps={totalLaps} raceControl={raceControl} />
+      <RaceHeader race={race} currentLap={currentLap} totalLaps={totalLaps} raceControl={raceControl} weather={weather} laps={laps} />
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Leaderboard Panel */}
         <div className="w-72 flex-shrink-0 border-r border-border/50">
-          <Leaderboard standings={standings} />
+          <Leaderboard
+            standings={standings}
+            selectedDriverNumber={selectedDriverNumber}
+            onDriverSelect={handleDriverSelect}
+          />
         </div>
 
         {/* Track Visualization */}
@@ -238,7 +291,30 @@ export function RaceViewer({
             locations={locations}
             laps={laps}
             totalLaps={totalLaps}
+            selectedDriverNumber={selectedDriverNumber}
+            onDriverSelect={handleDriverSelect}
           />
+
+          {/* Driver Details Panel (floating over track) */}
+          {selectedDriverStanding && (
+            <DriverDetailsPanel
+              driver={selectedDriverStanding.driver}
+              position={selectedDriverStanding.position}
+              interval={selectedDriverStanding.interval}
+              gapToLeader={selectedDriverStanding.gapToLeader}
+              onClose={() => handleDriverSelect(null)}
+            />
+          )}
+
+          {/* Team Radio Panel (floating over track - bottom right) */}
+          <div className="absolute bottom-24 right-4 z-30 w-80">
+            <TeamRadioPanel
+              teamRadio={teamRadio}
+              drivers={drivers}
+              currentLap={currentLap}
+              laps={laps}
+            />
+          </div>
         </div>
 
         {/* Chat Panel */}
@@ -273,6 +349,7 @@ export function RaceViewer({
         pitStops={pitStops}
         raceControl={raceControl}
         drivers={drivers}
+        positionsByLap={positionsByLap}
       />
     </div>
   )

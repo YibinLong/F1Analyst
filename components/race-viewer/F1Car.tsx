@@ -10,6 +10,8 @@ interface F1CarProps {
   driverNumber: number
   isSelected?: boolean
   showTrail?: boolean
+  onClick?: () => void
+  scale?: number  // Car scale multiplier (default: 1.0, applied on top of base 3x scale)
 }
 
 /**
@@ -28,8 +30,11 @@ export function F1Car({
   driverNumber,
   isSelected = false,
   showTrail = true,
+  onClick,
+  scale = 1.0,
 }: F1CarProps) {
   const groupRef = useRef<THREE.Group>(null)
+  const pulseRef = useRef<THREE.Mesh>(null)
 
   // Create materials with team color
   const materials = useMemo(() => {
@@ -68,11 +73,43 @@ export function F1Car({
     }
   }, [materials])
 
-  // Scale factor for 3x track size
-  const s = 3
+  // Animate selection pulse effect
+  useFrame((state) => {
+    if (isSelected && pulseRef.current) {
+      const pulse = Math.sin(state.clock.elapsedTime * 4) * 0.5 + 0.5
+      pulseRef.current.scale.setScalar(1 + pulse * 0.3)
+      if (pulseRef.current.material instanceof THREE.MeshBasicMaterial) {
+        pulseRef.current.material.opacity = 0.3 + pulse * 0.3
+      }
+    }
+  })
+
+  // Scale factor: base 3x for track size, multiplied by optional scale prop
+  // This allows per-track car sizing to ensure cars fit within track bounds
+  const s = 3 * scale
 
   return (
-    <group ref={groupRef} position={position}>
+    <group ref={groupRef} position={position} onClick={onClick}>
+      {/* Invisible click target - larger hitbox for easier clicking */}
+      <mesh visible={false}>
+        <boxGeometry args={[0.6 * s, 0.3 * s, 0.3 * s]} />
+        <meshBasicMaterial transparent opacity={0} />
+      </mesh>
+
+      {/* Selection ring effect */}
+      {isSelected && (
+        <mesh ref={pulseRef} position={[0, 0.01 * s, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.25 * s, 0.35 * s, 32]} />
+          <meshBasicMaterial
+            color={teamColor}
+            transparent
+            opacity={0.5}
+            side={THREE.DoubleSide}
+            blending={THREE.AdditiveBlending}
+          />
+        </mesh>
+      )}
+
       {/* Main body - elongated box */}
       <mesh material={materials.body} position={[0, 0.03 * s, 0]}>
         <boxGeometry args={[0.35 * s, 0.06 * s, 0.14 * s]} />
@@ -131,7 +168,7 @@ export function F1Car({
 
       {/* Motion trail effect */}
       {showTrail && (
-        <MotionTrail teamColor={teamColor} />
+        <MotionTrail teamColor={teamColor} scale={scale} />
       )}
 
       {/* Selection highlight */}
@@ -148,10 +185,10 @@ export function F1Car({
  * Creates an Akira-style motion trail effect behind the car
  * Multiple colored streaks that extend behind for speed effect
  */
-function MotionTrail({ teamColor }: { teamColor: string }) {
+function MotionTrail({ teamColor, scale = 1.0 }: { teamColor: string; scale?: number }) {
   const trailColor = new THREE.Color(teamColor)
-  // Scale factor for 3x track size
-  const s = 3
+  // Scale factor: base 3x for track size, multiplied by optional scale prop
+  const s = 3 * scale
 
   // Create Akira-style speed lines using thin elongated shapes
   return (
@@ -230,32 +267,42 @@ function MotionTrail({ teamColor }: { teamColor: string }) {
  *
  * Wraps F1Car with smooth position and rotation interpolation.
  * Uses useFrame for 60fps updates.
+ *
+ * Rotation can be provided via targetRotation prop (calculated from track trajectory)
+ * which provides stable orientation during animation.
  */
 interface AnimatedF1CarProps {
   targetPosition: { x: number; y: number; z: number }
+  targetRotation?: number // Pre-calculated rotation from track trajectory (optional)
   teamColor: string
   driverNumber: number
   isSelected?: boolean
+  onClick?: () => void
+  scale?: number  // Car scale multiplier (default: 1.0)
 }
 
 // Reusable vectors to avoid garbage collection
 const tempVec = new THREE.Vector3()
-const prevPosVec = new THREE.Vector3()
 
 export function AnimatedF1Car({
   targetPosition,
+  targetRotation: targetRotationProp,
   teamColor,
   driverNumber,
   isSelected = false,
+  onClick,
+  scale = 1.0,
 }: AnimatedF1CarProps) {
   const groupRef = useRef<THREE.Group>(null)
-  const previousPosition = useRef({ x: targetPosition.x, y: targetPosition.y, z: targetPosition.z })
   const currentRotation = useRef(0)
+  const lastTargetRotation = useRef(targetRotationProp ?? 0)
 
-  // Update target when it changes
+  // Update last target rotation when prop changes
   useEffect(() => {
-    previousPosition.current = { ...targetPosition }
-  }, []) // Only on mount
+    if (targetRotationProp !== undefined) {
+      lastTargetRotation.current = targetRotationProp
+    }
+  }, [targetRotationProp])
 
   useFrame(() => {
     if (!groupRef.current) return
@@ -267,29 +314,19 @@ export function AnimatedF1Car({
       lerpFactor
     )
 
-    // Calculate rotation based on movement direction
-    const pos = groupRef.current.position
-    const dx = pos.x - previousPosition.current.x
-    const dz = pos.z - previousPosition.current.z
-    const distance = Math.sqrt(dx * dx + dz * dz)
+    // Use pre-calculated target rotation if available
+    const targetRot = lastTargetRotation.current
 
-    if (distance > 0.001) {
-      // Calculate target rotation (atan2 gives angle from movement direction)
-      const targetRotation = Math.atan2(dx, dz)
+    // Smooth rotation interpolation with wrap-around handling
+    let rotationDiff = targetRot - currentRotation.current
 
-      // Smooth rotation interpolation with wrap-around handling
-      let rotationDiff = targetRotation - currentRotation.current
+    // Handle rotation wrap-around (-PI to PI)
+    if (rotationDiff > Math.PI) rotationDiff -= Math.PI * 2
+    if (rotationDiff < -Math.PI) rotationDiff += Math.PI * 2
 
-      // Handle rotation wrap-around (-PI to PI)
-      if (rotationDiff > Math.PI) rotationDiff -= Math.PI * 2
-      if (rotationDiff < -Math.PI) rotationDiff += Math.PI * 2
-
-      currentRotation.current += rotationDiff * 0.1
-      groupRef.current.rotation.y = currentRotation.current
-    }
-
-    // Update previous position
-    previousPosition.current = { x: pos.x, y: pos.y, z: pos.z }
+    // Smooth rotation interpolation
+    currentRotation.current += rotationDiff * 0.1
+    groupRef.current.rotation.y = currentRotation.current
   })
 
   return (
@@ -300,6 +337,8 @@ export function AnimatedF1Car({
         driverNumber={driverNumber}
         isSelected={isSelected}
         showTrail={true}
+        onClick={onClick}
+        scale={scale}
       />
     </group>
   )

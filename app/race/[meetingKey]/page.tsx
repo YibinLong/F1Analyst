@@ -4,6 +4,7 @@ import { RaceViewerWrapper } from "@/components/race-viewer/race-viewer-wrapper"
 import { RaceViewerSkeleton } from "@/components/race-viewer/race-viewer-skeleton"
 import { RaceViewerErrorBoundary } from "@/components/error-boundary"
 import { getMeetings, mapCircuitToKey } from "@/lib/openf1"
+import { SEASON_YEAR } from "@/lib/season"
 
 interface RacePageProps {
   params: Promise<{ meetingKey: string }>
@@ -13,7 +14,7 @@ export async function generateMetadata({ params }: RacePageProps) {
   const { meetingKey } = await params
 
   // Fetch meeting info for metadata
-  const meetings = await getMeetings(2025)
+  const meetings = await getMeetings(SEASON_YEAR)
   const meeting = meetings?.find((m) => String(m.meeting_key) === meetingKey)
 
   if (!meeting) {
@@ -36,7 +37,7 @@ export default async function RacePage({ params }: RacePageProps) {
   }
 
   // Pre-fetch meeting info to validate it exists
-  const meetings = await getMeetings(2025)
+  const meetings = await getMeetings(SEASON_YEAR)
   const meeting = meetings?.find((m) => m.meeting_key === meetingKeyNum)
 
   if (!meeting) {

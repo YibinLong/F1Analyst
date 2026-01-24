@@ -5,7 +5,14 @@ import { OrbitControls, PerspectiveCamera, Environment } from "@react-three/drei
 import { Suspense, useMemo, useRef, useEffect, useState } from "react"
 import * as THREE from "three"
 import type { Driver } from "@/lib/f1-teams"
-import type { OpenF1Location, OpenF1Lap } from "@/types/openf1"
+import type { OpenF1Location } from "@/types/openf1"
+
+// Essential lap data (reduced payload from API)
+interface EssentialLap {
+  lap_number: number
+  driver_number: number
+  date_start: string | null
+}
 import { trackPaths } from "@/lib/track-paths"
 import {
   calculateTrackBounds,
@@ -13,6 +20,7 @@ import {
   getAnimationTimestamp,
   getRaceTimeRange,
   getInterpolatedPosition,
+  getInterpolatedPositionWithRotation,
   type TrackBounds,
 } from "@/lib/track-utils"
 import {
@@ -21,11 +29,11 @@ import {
   getPositionAlongTrack,
   getDefaultTrackPoints,
   getStartLineMeta,
-  TRACK_WIDTH,
+  getTrackWidth,
   type StartLineMeta,
   type Track3DPoint,
 } from "@/lib/track-svg-utils"
-import { getTrackCalibration } from "@/lib/track-calibration"
+import { getTrackCalibration, getCarScale } from "@/lib/track-calibration"
 import { TrackVisualizationErrorBoundary } from "@/components/error-boundary"
 import { LocationDataUnavailable } from "./data-unavailable"
 import { Track3D } from "./Track3D"
@@ -44,8 +52,10 @@ interface TrackVisualizationProps {
   currentLap: number
   lapProgress?: number // 0-1 progress within current lap for smooth animation
   locations?: OpenF1Location[]
-  laps?: OpenF1Lap[]
+  laps?: EssentialLap[]
   totalLaps?: number
+  selectedDriverNumber?: number | null
+  onDriverSelect?: (driverNumber: number | null) => void
 }
 
 // Convert SVG path to 3D points
@@ -172,7 +182,7 @@ function Car({
 /**
  * AnimatedCar - Uses useFrame for smooth 60fps position interpolation
  * Directly mutates position via refs instead of React state for performance
- * Now uses the new F1Car component with rotation tracking
+ * Now uses the new F1Car component with pre-calculated rotation from track trajectory
  */
 function AnimatedCar({
   driverNumber,
@@ -184,6 +194,8 @@ function AnimatedCar({
   lapProgress,
   totalLaps,
   trackId,
+  isSelected,
+  onClick,
 }: {
   driverNumber: number
   color: string
@@ -194,28 +206,30 @@ function AnimatedCar({
   lapProgress: number
   totalLaps: number
   trackId: string
+  isSelected?: boolean
+  onClick?: () => void
 }) {
   const groupRef = useRef<THREE.Group>(null)
   const targetPosition = useRef({ x: 0, y: 0.45, z: 0 })
-  const previousPosition = useRef({ x: 0, y: 0.45, z: 0 })
+  const targetRotation = useRef(0)
   const currentRotation = useRef(0)
+  const carScale = useMemo(() => getCarScale(trackId), [trackId])
 
-  // Calculate target position based on current lap and progress
+  // Calculate target position AND rotation based on current lap and progress
+  // Rotation is calculated from the track trajectory (before -> after points)
+  // which provides stable orientation during animation
   useEffect(() => {
     const timestamp = getAnimationTimestamp(currentLap, lapProgress, raceTimeRange, totalLaps)
-    const pos = getInterpolatedPosition(driverLocations, timestamp, trackBounds, trackId)
-    if (pos) {
-      targetPosition.current = pos
+    const result = getInterpolatedPositionWithRotation(driverLocations, timestamp, trackBounds, trackId)
+    if (result) {
+      targetPosition.current = { x: result.x, y: result.y, z: result.z }
+      targetRotation.current = result.rotation
     }
   }, [currentLap, lapProgress, driverLocations, trackBounds, raceTimeRange, totalLaps, trackId])
 
   // Smooth interpolation every frame using useFrame
   useFrame(() => {
     if (!groupRef.current) return
-
-    // Store previous position for rotation calculation
-    const prevX = groupRef.current.position.x
-    const prevZ = groupRef.current.position.z
 
     // Smoothly lerp to target position (higher factor = faster response)
     const lerpFactor = 0.12
@@ -229,23 +243,15 @@ function AnimatedCar({
       lerpFactor
     )
 
-    // Calculate rotation based on movement direction
-    const dx = groupRef.current.position.x - prevX
-    const dz = groupRef.current.position.z - prevZ
-    const distance = Math.sqrt(dx * dx + dz * dz)
+    // Smooth rotation interpolation with wrap-around handling
+    // Uses pre-calculated target rotation from track trajectory
+    let rotationDiff = targetRotation.current - currentRotation.current
+    if (rotationDiff > Math.PI) rotationDiff -= Math.PI * 2
+    if (rotationDiff < -Math.PI) rotationDiff += Math.PI * 2
 
-    if (distance > 0.0005) {
-      // Calculate target rotation from movement direction
-      const targetRotation = Math.atan2(dx, dz)
-
-      // Smooth rotation with wrap-around handling
-      let rotationDiff = targetRotation - currentRotation.current
-      if (rotationDiff > Math.PI) rotationDiff -= Math.PI * 2
-      if (rotationDiff < -Math.PI) rotationDiff += Math.PI * 2
-
-      currentRotation.current += rotationDiff * 0.08
-      groupRef.current.rotation.y = currentRotation.current
-    }
+    // Smooth rotation interpolation
+    currentRotation.current += rotationDiff * 0.1
+    groupRef.current.rotation.y = currentRotation.current
   })
 
   return (
@@ -255,6 +261,9 @@ function AnimatedCar({
         teamColor={color}
         driverNumber={driverNumber}
         showTrail={true}
+        isSelected={isSelected}
+        onClick={onClick}
+        scale={carScale}
       />
     </group>
   )
@@ -275,6 +284,8 @@ function CarFallback({
   lapProgress = 0,
   totalLaps = 57,
   startMeta,
+  isSelected,
+  onClick,
 }: {
   color: string
   index: number
@@ -286,11 +297,15 @@ function CarFallback({
   lapProgress?: number
   totalLaps?: number
   startMeta?: StartLineMeta | null
+  isSelected?: boolean
+  onClick?: () => void
 }) {
   const groupRef = useRef<THREE.Group>(null)
   const currentRotation = useRef(0)
   const calibration = useMemo(() => getTrackCalibration(trackId), [trackId])
+  const carScale = useMemo(() => getCarScale(trackId), [trackId])
   const carHeight = calibration.render.carHeight * 3
+  const trackWidth = calibration.render.trackWidth
 
   // Calculate target position based on lap and progress
   const { targetPosition, targetRotation } = useMemo(() => {
@@ -321,11 +336,15 @@ function CarFallback({
     const isStartingGrid = currentLap === 1 && lapProgress < 0.02
 
     if (isStartingGrid) {
+      // Use track-specific width and car scale for grid positioning
+      // Scale grid spacing based on car scale to ensure proper fit
+      const scaledGridSpacing = trackWidth * 1.6 * carScale  // Row spacing accounts for car size
+      const scaledLaneOffset = trackWidth * 0.35 * carScale  // Lane offset accounts for car size
       const gridPositions = calculateStartingGridPositions(
         trackPoints,
         totalCars,
-        TRACK_WIDTH * 1.6,
-        TRACK_WIDTH * 0.35,
+        scaledGridSpacing,
+        scaledLaneOffset,
         meta
       )
       if (gridPositions.length > 0) {
@@ -363,7 +382,7 @@ function CarFallback({
       targetPosition: { ...result.position, y: carHeight },
       targetRotation: result.rotation
     }
-  }, [trackPoints, index, totalCars, currentLap, lapProgress, totalLaps, calibration.render.trackScale, carHeight, startMeta])
+  }, [trackPoints, index, totalCars, currentLap, lapProgress, totalLaps, calibration.render.trackScale, carHeight, trackWidth, carScale, startMeta])
 
   // Smooth animation every frame
   useFrame(() => {
@@ -401,6 +420,9 @@ function CarFallback({
         teamColor={color}
         driverNumber={driverNumber}
         showTrail={lapProgress > 0.02 || currentLap > 1}
+        isSelected={isSelected}
+        onClick={onClick}
+        scale={carScale}
       />
     </group>
   )
@@ -421,6 +443,9 @@ interface SceneProps {
   // Track points for fallback car positioning
   trackPoints?: Track3DPoint[]
   startMeta?: StartLineMeta | null
+  // Selection props
+  selectedDriverNumber?: number | null
+  onDriverSelect?: (driverNumber: number | null) => void
 }
 
 function Scene({
@@ -436,7 +461,11 @@ function Scene({
   totalLaps = 57,
   trackPoints = [],
   startMeta = null,
+  selectedDriverNumber,
+  onDriverSelect,
 }: SceneProps) {
+  const carScale = useMemo(() => getCarScale(trackId), [trackId])
+
   return (
     <>
       <PerspectiveCamera makeDefault position={[0, 36, 45]} fov={50} />
@@ -458,6 +487,11 @@ function Scene({
 
       {standings.slice(0, 20).map((standing, index) => {
         const driverLocations = locationsByDriver?.get(standing.driver.number)
+        const isSelected = selectedDriverNumber === standing.driver.number
+        const handleClick = () => {
+          // Toggle selection: if already selected, deselect; otherwise select
+          onDriverSelect?.(isSelected ? null : standing.driver.number)
+        }
 
         // Use AnimatedCar for smooth 60fps animation when we have location data
         if (useRealPositions && driverLocations && driverLocations.length > 0 && trackBounds && raceTimeRange) {
@@ -473,6 +507,8 @@ function Scene({
               lapProgress={lapProgress}
               totalLaps={totalLaps}
               trackId={trackId}
+              isSelected={isSelected}
+              onClick={handleClick}
             />
           )
         }
@@ -487,6 +523,9 @@ function Scene({
                 teamColor={standing.driver.teamColor}
                 driverNumber={standing.driver.number}
                 showTrail={true}
+                isSelected={isSelected}
+                onClick={handleClick}
+                scale={carScale}
               />
             </group>
           )
@@ -506,6 +545,8 @@ function Scene({
             lapProgress={lapProgress}
             totalLaps={totalLaps}
             startMeta={startMeta}
+            isSelected={isSelected}
+            onClick={handleClick}
           />
         )
       })}
@@ -523,6 +564,8 @@ export function TrackVisualization({
   locations = [],
   laps = [],
   totalLaps = 57,
+  selectedDriverNumber,
+  onDriverSelect,
 }: TrackVisualizationProps) {
   // DEBUG: Log what TrackVisualization receives
   useEffect(() => {
@@ -683,6 +726,8 @@ export function TrackVisualization({
               totalLaps={totalLaps}
               trackPoints={trackPoints}
               startMeta={startMeta}
+              selectedDriverNumber={selectedDriverNumber}
+              onDriverSelect={onDriverSelect}
             />
           </Suspense>
         </Canvas>

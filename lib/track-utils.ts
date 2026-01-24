@@ -226,6 +226,80 @@ export function getInterpolatedPosition(
 }
 
 /**
+ * Calculate car rotation (Y-axis) from movement direction
+ * F1Car model faces +X, so we subtract PI/2 to align with movement direction
+ */
+export function calculateCarRotation(
+  fromPos: { x: number; z: number },
+  toPos: { x: number; z: number }
+): number {
+  const dx = toPos.x - fromPos.x
+  const dz = toPos.z - fromPos.z
+  const distance = Math.sqrt(dx * dx + dz * dz)
+
+  if (distance < 0.0001) {
+    // No significant movement, return 0 (pointing along +X after adjustment)
+    return 0
+  }
+
+  // atan2(dx, dz) gives angle from movement direction
+  // F1Car model faces +X, so subtract PI/2 to align
+  return Math.atan2(dx, dz) - Math.PI / 2
+}
+
+/**
+ * Get interpolated position AND rotation for a driver at a given timestamp
+ * The rotation is calculated from the trajectory direction (before -> after points)
+ * which provides stable orientation during animation
+ */
+export function getInterpolatedPositionWithRotation(
+  driverLocations: OpenF1Location[],
+  timestamp: number,
+  bounds: TrackBounds,
+  trackId: string
+): { x: number; y: number; z: number; rotation: number } | null {
+  const { before, after, t } = findSurroundingLocations(driverLocations, timestamp)
+
+  if (!before) {
+    return null
+  }
+
+  const pos1 = getCarPosition(before.x, before.y, bounds, trackId)
+
+  if (!after || before === after) {
+    // No second point - try to find a future point for rotation calculation
+    const beforeIndex = driverLocations.indexOf(before)
+    const futurePoint = driverLocations[beforeIndex + 1]
+
+    if (futurePoint) {
+      const pos2 = getCarPosition(futurePoint.x, futurePoint.y, bounds, trackId)
+      const rotation = calculateCarRotation(pos1, pos2)
+      return { ...pos1, rotation }
+    }
+
+    // No future point, try past point
+    const pastPoint = driverLocations[beforeIndex - 1]
+    if (pastPoint) {
+      const pos0 = getCarPosition(pastPoint.x, pastPoint.y, bounds, trackId)
+      const rotation = calculateCarRotation(pos0, pos1)
+      return { ...pos1, rotation }
+    }
+
+    // Fallback: no rotation data available
+    return { ...pos1, rotation: 0 }
+  }
+
+  const pos2 = getCarPosition(after.x, after.y, bounds, trackId)
+  const interpolatedPos = interpolatePosition(pos1, pos2, t)
+
+  // Calculate rotation from the trajectory direction (before -> after)
+  // This gives stable rotation based on actual movement path, not frame deltas
+  const rotation = calculateCarRotation(pos1, pos2)
+
+  return { ...interpolatedPos, rotation }
+}
+
+/**
  * Get all driver positions at a given timestamp
  */
 export function getAllDriverPositions(

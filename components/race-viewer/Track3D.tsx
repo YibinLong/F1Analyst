@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react"
 import * as THREE from "three"
 import { SVGLoader } from "three/examples/jsm/loaders/SVGLoader.js"
 import { getTrackCalibration } from "@/lib/track-calibration"
-import { getStartLineMeta, TRACK_WIDTH, type StartLineMeta } from "@/lib/track-svg-utils"
+import { getStartLineMeta, getTrackWidth, TRACK_WIDTH, type StartLineMeta } from "@/lib/track-svg-utils"
 
 interface Track3DProps {
   trackId: string
@@ -224,8 +224,11 @@ export function Track3D({ trackId, startMeta }: Track3DProps) {
         const centerMetaPoints = centerPoints.map((p) => ({ x: p.x, y: p.y, z: p.z }))
         const startInfo = startMeta ?? getStartLineMeta(centerMetaPoints)
 
+        // Get calibrated track width for this track
+        const trackWidth = calibration.render.trackWidth
+
         // Create road surface (dark asphalt)
-        const roadGeometry = createRoadSurface(centerPoints, TRACK_WIDTH)
+        const roadGeometry = createRoadSurface(centerPoints, trackWidth)
         const roadMaterial = new THREE.MeshStandardMaterial({
           color: 0x1a1a1a, // Dark asphalt
           roughness: 0.9,
@@ -237,7 +240,7 @@ export function Track3D({ trackId, startMeta }: Track3DProps) {
         group.add(roadMesh)
 
         // Create left edge (white line)
-        const leftEdgePoints = offsetPath(centerPoints, TRACK_WIDTH / 2, "left")
+        const leftEdgePoints = offsetPath(centerPoints, trackWidth / 2, "left")
         const leftLineGeometry =
           new THREE.BufferGeometry().setFromPoints([...leftEdgePoints, leftEdgePoints[0]])
         const edgeMaterial = new THREE.LineBasicMaterial({
@@ -251,7 +254,7 @@ export function Track3D({ trackId, startMeta }: Track3DProps) {
         // Create right edge (white line)
         const rightEdgePoints = offsetPath(
           centerPoints,
-          TRACK_WIDTH / 2,
+          trackWidth / 2,
           "right"
         )
         const rightLineGeometry =
@@ -300,7 +303,7 @@ export function Track3D({ trackId, startMeta }: Track3DProps) {
           // Create a proper checkered start/finish line
           const checkerSize = 0.24 // Larger checkers (scaled 3x)
           const checkerRows = 3
-          const checkerCols = Math.ceil(TRACK_WIDTH / checkerSize)
+          const checkerCols = Math.ceil(trackWidth / checkerSize)
 
           for (let row = 0; row < checkerRows; row++) {
             for (let col = 0; col < checkerCols; col++) {
@@ -389,6 +392,7 @@ export function Track3D({ trackId, startMeta }: Track3DProps) {
 function FallbackTrack({ trackId }: { trackId: string }) {
   const calibration = useMemo(() => getTrackCalibration(trackId), [trackId])
   const scale = calibration.render.trackScale
+  const trackWidth = calibration.render.trackWidth
 
   // Create center points for an oval track (sized to match 3x scale)
   const centerPoints = useMemo(() => {
@@ -413,9 +417,9 @@ function FallbackTrack({ trackId }: { trackId: string }) {
 
   // Create road surface and edge geometries
   const { roadGeometry, leftEdgeLine, rightEdgeLine, leftGlowLine, rightGlowLine } = useMemo(() => {
-    const road = createRoadSurface(centerPoints, TRACK_WIDTH)
-    const left = offsetPath(centerPoints, TRACK_WIDTH / 2, "left")
-    const right = offsetPath(centerPoints, TRACK_WIDTH / 2, "right")
+    const road = createRoadSurface(centerPoints, trackWidth)
+    const left = offsetPath(centerPoints, trackWidth / 2, "left")
+    const right = offsetPath(centerPoints, trackWidth / 2, "right")
 
     const leftEdgeGeometry = new THREE.BufferGeometry().setFromPoints(left)
     const rightEdgeGeometry = new THREE.BufferGeometry().setFromPoints(right)
@@ -447,7 +451,7 @@ function FallbackTrack({ trackId }: { trackId: string }) {
       leftGlowLine: leftGlow,
       rightGlowLine: rightGlow,
     }
-  }, [centerPoints])
+  }, [centerPoints, trackWidth])
 
   const startInfo = useMemo(
     () => getStartLineMeta(centerPoints.map((p) => ({ x: p.x, y: p.y, z: p.z }))),
@@ -487,7 +491,7 @@ function FallbackTrack({ trackId }: { trackId: string }) {
         ]}
         rotation={[0, Math.atan2(startInfo.direction.x, startInfo.direction.z) + Math.PI / 2, 0]}
       >
-        <boxGeometry args={[TRACK_WIDTH * 1.2, 0.03, 0.15]} />
+        <boxGeometry args={[trackWidth * 1.2, 0.03, 0.15]} />
         <meshStandardMaterial
           color="#ffffff"
           emissive="#ffffff"
